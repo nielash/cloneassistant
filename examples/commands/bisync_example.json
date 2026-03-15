@@ -1,0 +1,30 @@
+{
+  "path1": "/Users/nielash/Rclone/Drives",
+  "path2": "main:",
+  "filtersFile": "/Users/nielash/Rclone/Filters/bisync_combined_filters.txt",
+  "backupdir1": "/Users/nielash/Rclone/Drives/Encrypted/BackupDir",
+  "backupdir2": "main:Encrypted/BackupDir",
+  "checkAccess": true,
+  "maxDelete": 10,
+  "compare": "size,modtime,checksum",
+  "slowHashSyncOnly": true,
+  "resilient": true,
+  "recover": true,
+  "maxLock": "10m",
+  "no-cleanup": true,
+  "conflictResolve": "newer",
+  "createEmptySrcDirs": true,
+  "_config": {
+    "CheckSum": true,
+    "DisableFeatures": [
+      "ListR"
+    ],
+    "Checkers": 16,
+    "Metadata": true,
+    "LogLevel": "INFO",
+    "FixCase": true,
+    "StatsFileNameLength": 100,
+    "CreateEmptySrcDirs": true,
+    "TerminalColorMode": "NEVER"
+  }
+}

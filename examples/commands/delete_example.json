@@ -1,0 +1,11 @@
+{
+  "fs": "/Users/nielash/Rclone/Drives",
+  "_config": {
+    "LogLevel": "Info"
+  },
+  "_filter": {
+    "IncludeRule": [
+      ".DS_Store.conflict*"
+    ]
+  }
+}

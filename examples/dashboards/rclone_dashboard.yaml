@@ -1,0 +1,202 @@
+views:
+  - type: sections
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: History
+            heading_style: title
+          - type: tile
+            entity: switch.bisync_desktop
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: binary_sensor.health
+            vertical: false
+            features_position: bottom
+          - type: history-graph
+            entities:
+              - entity: switch.bisync_desktop
+              - entity: binary_sensor.health
+              - entity: sensor.last_error
+            title: Past Hour
+            hours_to_show: 1
+          - type: history-graph
+            entities:
+              - entity: switch.bisync_desktop
+              - entity: binary_sensor.health
+              - entity: sensor.last_error
+              - entity: sensor.total_bytes
+              - entity: sensor.duration
+              - entity: sensor.total_transfers
+            hours_to_show: 6
+            title: Bisync
+      - type: grid
+        cards:
+          - type: heading
+            heading: Bisync
+            heading_style: title
+            icon: mdi:cached
+            badges:
+              - type: entity
+                show_state: true
+                show_icon: true
+                entity: binary_sensor.health
+                color: state
+              - type: entity
+                show_state: true
+                show_icon: true
+                entity: switch.bisync_desktop
+                color: state
+          - type: tile
+            grid_options:
+              columns: full
+            entity: sensor.last_error
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.last_start_time
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.last_end_time
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.duration
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.eta
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.total_transfers
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.total_bytes
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.total_checks
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.deleted_dirs
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.deletes
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.listed
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.renames
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.serverside_copies
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.serverside_moves
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.speed
+            vertical: false
+            features_position: bottom
+          - type: tile
+            entity: sensor.errors
+            vertical: false
+            features_position: bottom
+          - type: logbook
+            target:
+              entity_id:
+                - switch.bisync_desktop
+      - type: grid
+        cards:
+          - type: heading
+            icon: mdi:beaker-check-outline
+            heading: Last Full Check
+            heading_style: title
+            badges:
+              - type: entity
+                show_state: true
+                show_icon: true
+                entity: binary_sensor.health_2
+                name:
+                  type: device
+                color: state
+          - type: tile
+            entity: sensor.last_end_time_2
+            vertical: false
+            features_position: bottom
+          - type: history-graph
+            entities:
+              - entity: switch.bisync_desktop
+              - entity: binary_sensor.health
+              - entity: switch.full_check_desktop
+              - entity: binary_sensor.health_2
+              - entity: switch.gdocs_backup
+              - entity: binary_sensor.health_3
+              - entity: switch.prune_dsstore_conflicts_desktop
+              - entity: binary_sensor.health_4
+              - entity: switch.bisync_laptop
+              - entity: binary_sensor.health_5
+              - entity: switch.full_check_laptop
+              - entity: binary_sensor.health_6
+              - entity: switch.prune_dsstore_conflicts_laptop
+              - entity: binary_sensor.health_7
+            title: Jobs
+            hours_to_show: 2
+          - show_name: true
+            show_icon: true
+            type: button
+            tap_action:
+              action: url
+              url_path: /config/integrations/integration/rclone
+            name: Configure
+            icon: mdi:wrench-cog
+            grid_options:
+              columns: 3
+              rows: 2
+          - type: markdown
+            content: >-
+              ## Links
+
+              - [Docs](https://github.com/nielash/cloneassistant)
+
+              - [Safe JSON Validator](https://www.json.fr/)
+
+              ```
+
+              rclone rcd -vv --rc-addr=localhost:5572 --rc-user=SOME_USERNAME --rc-pass=SOME_PASSWORD --rc-job-expire-duration=1h
+
+              ```
+
+          - display_order: none
+            type: todo-list
+            entity: todo.rclone
+            hide_completed: true
+    header: {}
+    badges:
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: switch.bisync_desktop
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.errors
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: binary_sensor.health

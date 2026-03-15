@@ -1,0 +1,15 @@
+{
+  "srcFs": "gdrive_nielash:",
+  "dstFs": "Rclone/Drives/Encrypted/backups/nielash Google Drive",
+  "createEmptySrcDirs": true,
+  "_config": {
+    "Metadata": true,
+    "LogLevel": "INFO",
+    "FixCase": true,
+    "StatsFileNameLength": 100,
+    "CreateEmptySrcDirs": true,
+    "MetadataSet": {
+      "content-type": ""
+    }
+  }
+}

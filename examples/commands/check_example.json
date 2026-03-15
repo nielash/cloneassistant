@@ -1,0 +1,19 @@
+{
+  "srcFs": "/Users/nielash/Rclone/Drives",
+  "dstFs": "main:",
+  "_config": {
+    "Metadata": true,
+    "LogLevel": "Info",
+    "FixCase": true,
+    "StatsFileNameLength": 100
+  },
+  "_filter": {
+    "FilterFrom": [
+      "/Users/nielash/Rclone/Filters/bisync_combined_filters.txt"
+    ],
+    "FilterRule": [
+      "- /.DS_Store",
+      "- .DS_Store"
+    ]
+  }
+}
