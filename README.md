@@ -115,7 +115,7 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
     rclone archive extract cloneassistant.zip cloneassistant_extracted
 
     # copy to HA config/custom_components directory
-    rclone sync cloneassistant_extracted/cloneassistant-main/custom_components/rclone homeassistant:config/custom_components/rclone
+    rclone sync cloneassistant_extracted/cloneassistant-main/custom_components/rclone homeassistant:config/custom_components/rclone --exclude "userfiles/**"
     ```
 
 3. [Restart](https://www.home-assistant.io/docs/configuration/#reloading-the-configuration-to-apply-changes) Home Assistant.
