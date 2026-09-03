@@ -2,7 +2,7 @@
 
 Control and monitor your recurring [Rclone](https://rclone.org) jobs from [Home Assistant dashboards](https://www.home-assistant.io/dashboards/).
 
-<img src="/docs/media/History_Dashboard.png" width="300"> <img src="/docs/media/Sensors.png" width="300">
+<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/History_Dashboard.png" width="300"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Sensors.png" width="300">
 
 ## Features
 
@@ -16,13 +16,13 @@ This is intended for a particular use case: you have one or more rclone commands
 
 The rclone jobs you monitor do not need to be running on the same machine as Home Assistant. For example, Home Assistant can monitor rclone jobs running on multiple different LAN-connected computers. It can also run concurrent async jobs on the same machine, while managing the concurrency efficiently and tracking stats separately.
 
-<img src="/docs/media/Device.png" width="300"> <img src="/docs/media/Jobs_Timeline.png" width="300">
+<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Device.png" width="300"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Jobs_Timeline.png" width="300">
 
 <details>
   <summary>More screenshots</summary>
 
-  ![Screenshot of the Config Entities page](/docs/media/Config_Entities.png) ![Screenshot of the config options form](/docs/media/Config.png)
-  ![Screenshot of the Switch entity](/docs/media/Switch.png) ![Screenshot of a Transfers graph](/docs/media/Transfers_Graph.png)
+  ![Screenshot of the Config Entities page](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config_Entities.png) ![Screenshot of the config options form](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config.png)
+  ![Screenshot of the Switch entity](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Switch.png) ![Screenshot of a Transfers graph](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Transfers_Graph.png)
 </details>
 
 ## Quick Start
