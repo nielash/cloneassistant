@@ -146,13 +146,13 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
   > [!TIP]
   > Use a [JSON validator](https://www.json.fr/) to validate (and beautify) your JSON.
 
-- [Bisync JSON Example](/examples/commands/bisync_example.json)
+- [Bisync JSON Example](https://github.com/nielash/cloneassistant/blob/main/examples/commands/bisync_example.json)
   - Reference: <https://rclone.org/rc/#sync-bisync>
-- [Sync JSON Example](/examples/commands/sync_example.json)
+- [Sync JSON Example](https://github.com/nielash/cloneassistant/blob/main/examples/commands/sync_example.json)
   - Reference: <https://rclone.org/rc/#sync-sync>
-- [Check JSON Example](/examples/commands/check_example.json)
+- [Check JSON Example](https://github.com/nielash/cloneassistant/blob/main/examples/commands/check_example.json)
   - Reference: <https://rclone.org/rc/#operations-check>
-- [Delete JSON Example](/examples/commands/delete_example.json)
+- [Delete JSON Example](https://github.com/nielash/cloneassistant/blob/main/examples/commands/delete_example.json)
   - Reference: <https://rclone.org/rc/#operations-delete>
 
 3. Enter a "Device" name (usually the suggested default will be fine) and complete setup.
@@ -190,7 +190,7 @@ The easiest way to set these up is through the visual editor (Settings > Automat
 
 ### 5. (Optional) Set up a Dashboard
 
-While it's easy enough to monitor entities from the default "device" page, you may want to set up a "Dashboard" to emphasize the jobs and metrics that are most important to you, and customize how they are displayed. Designing dashboards is a huge topic and beyond the scope of this tutorial, but for convenience, an [example template](/examples/dashboards/rclone_dashboard.yaml) is provided. You will need to replace the entities with your own.
+While it's easy enough to monitor entities from the default "device" page, you may want to set up a "Dashboard" to emphasize the jobs and metrics that are most important to you, and customize how they are displayed. Designing dashboards is a huge topic and beyond the scope of this tutorial, but for convenience, an [example template](https://github.com/nielash/cloneassistant/blob/main/examples/dashboards/rclone_dashboard.yaml) is provided. You will need to replace the entities with your own.
 
 ### 6. Editing your Configuration
 
