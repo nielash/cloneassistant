@@ -42,6 +42,11 @@ async def async_setup_entry(
 class RcloneJobSwitch(CoordinatorEntity[RcloneCoordinator], SwitchEntity):
     """Implementation of a sensor."""
 
+    # The switch represents the job itself rather than one of its metrics, so
+    # it inherits the device name outright instead of composing a role onto it.
+    _attr_has_entity_name = True
+    _attr_name = None
+
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
         super().__init__(coordinator)
@@ -94,11 +99,6 @@ class RcloneJobSwitch(CoordinatorEntity[RcloneCoordinator], SwitchEntity):
                 )
             },
         )
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self.device.name
 
     @property
     def is_on(self) -> bool | None:

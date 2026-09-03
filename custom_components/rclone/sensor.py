@@ -95,6 +95,11 @@ async def async_setup_entry(
 class BytesSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
 
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
         super().__init__(coordinator)
@@ -167,6 +172,11 @@ class BytesSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
 
 class DurationSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
+
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
@@ -249,6 +259,11 @@ class DurationSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
 class TimestampSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
 
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
         super().__init__(coordinator)
@@ -319,6 +334,11 @@ class TimestampSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
 
 class CountSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
+
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
@@ -411,6 +431,11 @@ class CountSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
 class DataRateSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
 
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
         super().__init__(coordinator)
@@ -483,6 +508,11 @@ class DataRateSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
 
 class StringSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     """Implementation of a sensor."""
+
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""

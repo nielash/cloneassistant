@@ -43,6 +43,11 @@ async def async_setup_entry(
 class HealthBinarySensor(CoordinatorEntity[RcloneCoordinator], BinarySensorEntity):
     """Implementation of a sensor."""
 
+    # Each entity names only its own role ("Health", "Errors"); Home Assistant
+    # composes "<device> <role>" for the friendly name and the entity id, so a
+    # second job no longer collides into binary_sensor.health_2.
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: RcloneCoordinator, device: Device) -> None:
         """Initialise sensor."""
         super().__init__(coordinator)
