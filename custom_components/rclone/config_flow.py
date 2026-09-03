@@ -35,6 +35,8 @@ from .api import API, APIAuthError, APIConnectionError
 from .const import (
     CHECK,
     COMMAND_ARGS,
+    COUNT_ERRORS_AS_FAILURE,
+    DEFAULT_COUNT_ERRORS_AS_FAILURE,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MIN_SCAN_INTERVAL,
@@ -170,6 +172,9 @@ class RcloneConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input[CONF_COMMAND] = config_entry.data[CONF_COMMAND]
                 user_input[COMMAND_ARGS] = config_entry.data[COMMAND_ARGS]
                 user_input[CONF_SCAN_INTERVAL] = config_entry.data[CONF_SCAN_INTERVAL]
+                user_input[COUNT_ERRORS_AS_FAILURE] = config_entry.data.get(
+                    COUNT_ERRORS_AS_FAILURE, DEFAULT_COUNT_ERRORS_AS_FAILURE
+                )
                 await validate_input(self.hass, user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -256,6 +261,12 @@ class RcloneOptionsFlowHandler(OptionsFlow):
                         "json blob - see https://rclone.org/rc/#specifying-remotes-to-work-on"
                     },
                 ): str,
+                vol.Required(
+                    COUNT_ERRORS_AS_FAILURE,
+                    default=self.config_entry.data.get(
+                        COUNT_ERRORS_AS_FAILURE, DEFAULT_COUNT_ERRORS_AS_FAILURE
+                    ),
+                ): bool,
             }
         )
 

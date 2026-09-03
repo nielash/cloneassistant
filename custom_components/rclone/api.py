@@ -41,6 +41,7 @@ class DeviceType(StrEnum):
     SPEED_SENSOR = "speed_sensor"
     LAST_ERROR_SENSOR = "last_error_sensor"
     TOTAL_BYTES_SENSOR = "total_bytes_sensor"
+    LAST_SUCCESS_SENSOR = "last_success_sensor"
 
     OTHER = "other"
 
@@ -69,6 +70,7 @@ DEVICES: list[dict[str, int | str | DeviceType]] = [
     {"id": 1, "type": DeviceType.SPEED_SENSOR, "rclonejobid": 0},
     {"id": 1, "type": DeviceType.LAST_ERROR_SENSOR, "rclonejobid": 0},
     {"id": 1, "type": DeviceType.TOTAL_BYTES_SENSOR, "rclonejobid": 0},
+    {"id": 1, "type": DeviceType.LAST_SUCCESS_SENSOR, "rclonejobid": 0},
 ]
 
 counters = {
@@ -103,13 +105,21 @@ class Device:
 class API:
     """Class for API."""
 
-    def __init__(self, host: str, user: str, pwd: str, friendly_name: str) -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        pwd: str,
+        friendly_name: str,
+        count_errors_as_failure: bool = False,
+    ) -> None:
         """Initialise."""
         self.host = host
         self.user = user
         self.pwd = pwd
         self.friendly_name = friendly_name
         self.unfriendly_name = friendly_name.replace(" ", "_").lower()
+        self.count_errors_as_failure = count_errors_as_failure
         self.connected: bool = False
         self.version_info: dict[str, Any]
 
@@ -165,6 +175,15 @@ class API:
             raise self.handle_job_not_found(devices)
 
         statsresp = self.jobstats_call(parent.rclonejobid)
+
+        # rclone only fills in job/status "error" once a run has completed, so
+        # the success/failure verdict is only meaningful on the finished
+        # transition. Devices keep their jobid until that transition and have it
+        # cleared below, after which get_jobstatus returns early -- so this block
+        # is evaluated exactly once per run.
+        finished = bool(resp["finished"])
+        failed = self.run_failed(resp, statsresp) if finished else False
+
         for device in devices:
             match device.device_type:
                 case DeviceType.JOB_SWITCH:
@@ -216,6 +235,12 @@ class API:
                     self.last_error_state(device, resp, statsresp)
                 case DeviceType.TOTAL_BYTES_SENSOR:
                     device.state = statsresp["totalBytes"]
+                case DeviceType.LAST_SUCCESS_SENSOR:
+                    # Deliberately left untouched while running and on failure,
+                    # so the sensor keeps pointing at the last run that actually
+                    # worked rather than the last run that merely happened.
+                    if finished and not failed:
+                        device.state = resp["endTime"]
 
             if resp["finished"]:
                 # clear jobid when job is finished
@@ -243,6 +268,28 @@ class API:
         else:
             device.state = None
         return device.state
+
+    def run_failed(self, resp: dict[str, Any], statsresp: dict[str, Any]) -> bool:
+        """Determine whether a finished run should be counted as a failure."""
+        if resp["error"] != "":
+            return True
+        # A run can leave errors in core/stats and still return no error.
+        # operations/check -- this integration's default command -- is the clear
+        # case: it counts every error it meets, but only returns one when it
+        # found actual differences (fs/operations/check.go gates the return on
+        # "c.differences.Load() > 0"). So a subdirectory it could not list
+        # leaves errors > 0 with an empty error: everything it compared matched,
+        # it just did not get to see everything.
+        #
+        # This is NOT about retries. Low-level retries never reach the counter
+        # -- fs/operations/copy.go calls fs.CountError once, after the retry
+        # loop gives up -- and high-level --retries does not run over the rc API
+        # at all, since that loop lives in cmd/cmd.go and fs/rc/jobs bypasses
+        # it. Nor is it about a file that stayed unreadable: sync counts that
+        # error and returns it, so job/status reports it too.
+        if not self.count_errors_as_failure:
+            return False
+        return int(statsresp.get("errors", 0) or 0) > 0
 
     def get_parent(self, devices: list[Device]) -> Device | None:
         """Return the parent device (JOB_SWITCH) from the list of devices."""
@@ -300,6 +347,8 @@ class API:
                 return "Last Error"
             case DeviceType.TOTAL_BYTES_SENSOR:
                 return "Total Bytes"
+            case DeviceType.LAST_SUCCESS_SENSOR:
+                return "Last Success Time"
             case _:
                 return f"OtherSensor{device_id}"
 
@@ -326,6 +375,11 @@ class API:
                 | DeviceType.END_SENSOR
                 | DeviceType.LAST_ERROR_SENSOR
                 | DeviceType.SPEED_SENSOR
+                # A fresh install has seen no run, so it does not know the time
+                # of the last success. Unknown also lets the restoring sensor
+                # tell "nothing yet" apart from a real value when deciding
+                # whether to restore.
+                | DeviceType.LAST_SUCCESS_SENSOR
             ):
                 return None
             case (
