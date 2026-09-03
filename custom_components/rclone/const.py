@@ -44,3 +44,5 @@ RCLONE_COMMANDS = {
     RMDIRS: "operations/rmdirs",
 }
 COMMAND_ARGS = "command_args"
+COUNT_ERRORS_AS_FAILURE = "count_errors_as_failure"
+DEFAULT_COUNT_ERRORS_AS_FAILURE = False

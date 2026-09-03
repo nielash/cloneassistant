@@ -4,6 +4,7 @@ import datetime
 import logging
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
@@ -51,6 +52,13 @@ async def async_setup_entry(
             TimestampSensor(coordinator, device)
             for device in coordinator.data.devices
             if device.device_type in [DeviceType.START_SENSOR, DeviceType.END_SENSOR]
+        ]
+    )
+    sensors.extend(
+        [
+            LastSuccessSensor(coordinator, device)
+            for device in coordinator.data.devices
+            if device.device_type == DeviceType.LAST_SUCCESS_SENSOR
         ]
     )
     sensors.extend(
@@ -310,7 +318,9 @@ class TimestampSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     @property
     def native_value(self) -> datetime.datetime | None:
         """Return the state of the entity."""
-        if self.device.state == 0:
+        # None as well as 0: Last Success Time has no value at all until a run
+        # has finished cleanly, where the other timestamps default to 0.
+        if self.device.state in (0, None):
             return None
         return datetime.datetime.fromisoformat(str(self.device.state))
 
@@ -329,6 +339,8 @@ class TimestampSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
                 return "mdi:clock-start"
             case DeviceType.END_SENSOR:
                 return "mdi:clock-end"
+            case DeviceType.LAST_SUCCESS_SENSOR:
+                return "mdi:clock-check-outline"
         return None
 
 
@@ -569,3 +581,45 @@ class StringSensor(CoordinatorEntity[RcloneCoordinator], SensorEntity):
     def icon(self) -> str:
         """Icon to use in the frontend."""
         return "mdi:comment-alert-outline"
+
+
+class LastSuccessSensor(TimestampSensor, RestoreSensor):
+    """When the job last finished without an error.
+
+    Unlike Last End Time this is not touched by a failed run, so
+    ``now() - last_success`` answers "how long has this job been broken?".
+
+    The value is restored on restart because rclone rcd forgets a job once
+    ``--rc-job-expire-duration`` passes: there is nothing left to read it back
+    from, which is exactly the case the Home Assistant developer docs call for
+    RestoreEntity. It is stored and restored verbatim -- no derived math, no
+    history analysis.
+
+    Disabled by default (the entity-disabled-by-default rule): it is history
+    this integration keeps, not something rclone reports, and most users do
+    not alert on it. That default only applies when the entity is first
+    registered, so changing it later would not reach existing installs.
+    """
+
+    _attr_entity_registry_enabled_default = False
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last known value before the first coordinator update."""
+        await super().async_added_to_hass()
+        await self.async_restore_device_state()
+
+    async def async_restore_device_state(self) -> None:
+        """Seed the shared device object from the previously stored state."""
+        # The coordinator rebuilds its devices from defaults on every startup,
+        # so restore into the device rather than onto the entity: that is the
+        # object the API mutates, and an entity-only value would be replaced by
+        # the device's unknown on the first coordinator update.
+        if self.device.state is not None:
+            return
+        last_data = await self.async_get_last_sensor_data()
+        if last_data is None or last_data.native_value is None:
+            return
+        value = last_data.native_value
+        self.device.state = (
+            value.isoformat() if isinstance(value, datetime.datetime) else str(value)
+        )

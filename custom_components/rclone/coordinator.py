@@ -20,7 +20,11 @@ from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import API, APIAuthError, Device, DeviceType
-from .const import COMMAND_ARGS
+from .const import (
+    COMMAND_ARGS,
+    COUNT_ERRORS_AS_FAILURE,
+    DEFAULT_COUNT_ERRORS_AS_FAILURE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +54,16 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
         self.rclone_command = config_entry.data[CONF_COMMAND]
         self.command_args = config_entry.data[COMMAND_ARGS]
         self.poll_interval = config_entry.data[CONF_SCAN_INTERVAL]
+        # Read through data then options so entries created before this option
+        # existed keep working without a migration.
+        self.count_errors_as_failure = bool(
+            config_entry.data.get(
+                COUNT_ERRORS_AS_FAILURE,
+                config_entry.options.get(
+                    COUNT_ERRORS_AS_FAILURE, DEFAULT_COUNT_ERRORS_AS_FAILURE
+                ),
+            )
+        )
 
         # Initialise DataUpdateCoordinator
         super().__init__(
@@ -70,6 +84,7 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
             user=self.user,
             pwd=self.pwd,
             friendly_name=self.friendly_name,
+            count_errors_as_failure=self.count_errors_as_failure,
         )
 
     async def async_update_data(self):

@@ -9,6 +9,7 @@ Control and monitor your recurring [Rclone](https://rclone.org) jobs from [Home 
 - Control and monitor Rclone jobs running on another device, via the [rc](https://rclone.org/rc/) API
 - Start/Stop a job from a Home Assistant "switch" device
 - Customizable sensors to monitor job stats and health
+- Track when each job last *succeeded*, so you can alert on jobs that have been failing for hours
 - Easily build custom automations and dashboards
 - Fully local by default – no cloud access required
 
@@ -188,11 +189,81 @@ mode: single
 
 The easiest way to set these up is through the visual editor (Settings > Automations & scenes > Create automation). Your "action" will want to turn "on" the switch "device" corresponding to this command.
 
-### 5. (Optional) Set up a Dashboard
+### 5. (Optional) Alert when a job stops succeeding
+
+Every job has a **Last Success Time** sensor. Unlike **Last End Time**, it is only
+updated when a run finishes without an error -- a failed run leaves it alone. That makes
+`now() - last_success_time` a direct answer to "how long has this job been broken?", which
+is the thing you actually want to alert on.
+
+The sensor is **disabled by default**. To use it, open the job's device (Settings > Devices
+& services > Rclone), find **Last Success Time** under the hidden or disabled entities, and
+enable it. Home Assistant reloads the integration, and the sensor reads `unknown` until the
+job's next clean run.
+
+This matters because rclone's `rcd` forgets a job once `--rc-job-expire-duration` passes,
+so nothing on the rclone side remembers when the job last worked. The integration stores
+the value and restores it when Home Assistant restarts.
+
+Here is an automation that notifies you when a job has not succeeded in 24 hours. Adjust
+the threshold per job -- a bisync that runs every 10 minutes deserves a much tighter one
+than a nightly backup:
+
+```yaml
+alias: Alert if Bisync Desktop has not succeeded in 24 hours
+description: ""
+triggers:
+  - trigger: template
+    value_template: >-
+      {{ now() - states('sensor.bisync_desktop_last_success_time') | as_datetime
+      > timedelta(hours = 24) }}
+    # Keep firing while it stays broken, rather than only on the crossing.
+    for:
+      minutes: 10
+conditions: []
+actions:
+  - action: notify.persistent_notification
+    data:
+      title: Rclone job failing
+      message: >-
+        Bisync Desktop has not completed successfully since
+        {{ states('sensor.bisync_desktop_last_success_time') | as_datetime
+        | relative_time }} ago.
+mode: single
+```
+
+> [!NOTE]
+> `Last Success Time` is `unknown` until the first run finishes cleanly, and
+> `as_datetime` on `unknown` yields `none`. Add a
+> `{{ has_value('sensor.bisync_desktop_last_success_time') and ... }}` guard if you want a
+> brand-new install to stay quiet rather than error in the template.
+
+By default, the sensor agrees with rclone about what "success" means: the run counted as
+a success if rclone reported no error.
+
+A run can report no error and still leave errors in its stats. The clearest case is
+`operations/check`, the default command: it counts every error it runs into, but only
+returns one if it found actual *differences*. So a subdirectory it could not list leaves
+the run "successful" with a nonzero **Errors** sensor -- everything it managed to compare
+matched, but it did not get to see everything. If you would rather treat that as a
+failure, enable **Count runs with errors as failed** in the integration's options (see
+[Editing your Configuration](#7-editing-your-configuration)).
+
+> [!NOTE]
+> This is not about retries. A file that fails and then succeeds on a retry is not counted
+> as an error at all, and a file that stays unreadable is counted *and* reported as the
+> job's error, so it already fails without this option. Note also that rclone's high-level
+> `--retries` does not apply to jobs started over the rc API -- only `--low-level-retries`
+> does.
+
+The **Health** binary sensor is deliberately unaffected by that option, so existing
+automations watching it keep behaving exactly as before.
+
+### 6. (Optional) Set up a Dashboard
 
 While it's easy enough to monitor entities from the default "device" page, you may want to set up a "Dashboard" to emphasize the jobs and metrics that are most important to you, and customize how they are displayed. Designing dashboards is a huge topic and beyond the scope of this tutorial, but for convenience, an [example template](https://github.com/nielash/cloneassistant/blob/main/examples/dashboards/rclone_dashboard.yaml) is provided. You will need to replace the entities with your own.
 
-### 6. Editing your Configuration
+### 7. Editing your Configuration
 
 The settings you configured in the previous steps can be easily re-configured as necessary later, without having to delete the device and start over.
 
@@ -200,7 +271,7 @@ The settings you configured in the previous steps can be easily re-configured as
 
     [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=rclone)
 
-2. To edit the `scan_interval`, `command`, or `command_args`, click the "gear" icon corresponding to the entry for the command.
+2. To edit the `scan_interval`, `command`, `command_args`, or `count_errors_as_failure`, click the "gear" icon corresponding to the entry for the command.
 
 3. To edit the `friendly_name`, `Host`, `Username`, or `Password`, click the three-dots menu corresponding to the entry for the command, and select "Reconfigure".
 

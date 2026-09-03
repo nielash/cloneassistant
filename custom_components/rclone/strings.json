@@ -31,7 +31,11 @@
     "step": {
       "init": {
         "data": {
+          "count_errors_as_failure": "Count runs with errors as failed",
           "scan_interval": "Scan Interval (seconds)"
+        },
+        "data_description": {
+          "count_errors_as_failure": "A run can report no error while still leaving errors in its stats. A check that could not list a subdirectory is the usual case: everything it compared matched, but it did not get to see everything. Turn this on to treat those runs as failures for Last Success Time."
         },
         "description": "Edit the options.",
         "title": "Rclone Integration Options"
