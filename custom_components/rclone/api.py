@@ -305,36 +305,41 @@ class API:
 
     def get_device_default_value(
         self, device_id: str, device_type: DeviceType
-    ) -> int | bool:
+    ) -> int | bool | None:
         """Get device's default value."""
+        # The alternatives below have to be joined with "|". Written as
+        # "case A, B:" -- as they were until this was fixed -- match reads them
+        # as a *sequence* pattern, which never matches a single DeviceType, so
+        # every arm fell through to the 0 default and sensors reported 0 before
+        # their first run instead of being unknown.
         match device_type:
             case DeviceType.JOB_SWITCH:
                 return False
             case DeviceType.HEALTH_SENSOR:
                 return False
-            case DeviceType.BYTES_SENSOR, DeviceType.TOTAL_BYTES_SENSOR:
+            case DeviceType.BYTES_SENSOR | DeviceType.TOTAL_BYTES_SENSOR:
                 return None
-            case DeviceType.DURATION_SENSOR, DeviceType.ETA_SENSOR:
+            case DeviceType.DURATION_SENSOR | DeviceType.ETA_SENSOR:
                 return 0
             case (
-                DeviceType.START_SENSOR,
-                DeviceType.END_SENSOR,
-                DeviceType.LAST_ERROR_SENSOR,
-                DeviceType.SPEED_SENSOR,
+                DeviceType.START_SENSOR
+                | DeviceType.END_SENSOR
+                | DeviceType.LAST_ERROR_SENSOR
+                | DeviceType.SPEED_SENSOR
             ):
                 return None
             case (
-                DeviceType.CHECKS_SENSOR,
-                DeviceType.TRANSFERS_SENSOR,
-                DeviceType.DELETEDDIRS_SENSOR,
-                DeviceType.DELETES_SENSOR,
-                DeviceType.ERRORS_SENSOR,
-                DeviceType.LISTED_SENSOR,
-                DeviceType.RENAMES_SENSOR,
-                DeviceType.SERVERSIDECOPIES_SENSOR,
-                DeviceType.SERVERSIDEMOVES_SENSOR,
-                DeviceType.TOTALCHECKS_SENSOR,
-                DeviceType.TOTALTRANSFERS_SENSOR,
+                DeviceType.CHECKS_SENSOR
+                | DeviceType.TRANSFERS_SENSOR
+                | DeviceType.DELETEDDIRS_SENSOR
+                | DeviceType.DELETES_SENSOR
+                | DeviceType.ERRORS_SENSOR
+                | DeviceType.LISTED_SENSOR
+                | DeviceType.RENAMES_SENSOR
+                | DeviceType.SERVERSIDECOPIES_SENSOR
+                | DeviceType.SERVERSIDEMOVES_SENSOR
+                | DeviceType.TOTALCHECKS_SENSOR
+                | DeviceType.TOTALTRANSFERS_SENSOR
             ):
                 return None
             case _:
