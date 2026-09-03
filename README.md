@@ -109,7 +109,7 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
 
     ```sh
     # download repo zip from github
-    rclone copyurl "https://github.com/nielash/cloneassistant/archive/refs/heads/master.zip" cloneassistant.zip
+    rclone copyurl "https://github.com/nielash/cloneassistant/archive/refs/heads/main.zip" cloneassistant.zip
 
     # extract it locally
     rclone archive extract cloneassistant.zip cloneassistant_extracted
