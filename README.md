@@ -205,6 +205,14 @@ This matters because rclone's `rcd` forgets a job once `--rc-job-expire-duration
 so nothing on the rclone side remembers when the job last worked. The integration stores
 the value and restores it when Home Assistant restarts.
 
+It also stores the job it is waiting on, so a run that is still going when Home Assistant
+restarts (or the integration reloads) is picked up again afterward. If rclone can no
+longer report on it -- `rcd` restarted too, or the job finished and expired before Home
+Assistant was back -- the run ends as a failure: the switch turns off, **Health** reports
+a problem, and **Last Error** says what happened. Keep `--rc-job-expire-duration` longer
+than a Home Assistant restart (the recommended `1h` is plenty), so a run that finishes in
+the meantime is still reported as it actually went.
+
 Here is an automation that notifies you when a job has not succeeded in 24 hours. Adjust
 the threshold per job -- a bisync that runs every 10 minutes deserves a much tighter one
 than a nightly backup:

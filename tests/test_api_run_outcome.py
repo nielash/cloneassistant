@@ -8,9 +8,10 @@ from typing import Any
 
 import pytest
 
-from custom_components.rclone.api import API, APIConnectionError, Device, DeviceType
+from custom_components.rclone.api import API, Device, DeviceType
 
 JOBID = 7
+EXECUTE_ID = "6f1c0f5e-3a38-4a40-9d0b-7c3d1f0e2a11"
 CLEAN_END = "2026-09-03T04:20:11.123456-04:00"
 LATER_END = "2026-09-04T04:20:11.123456-04:00"
 
@@ -27,10 +28,16 @@ def make_api(count_errors_as_failure: bool = False) -> API:
 
 
 def status(
-    finished: bool = True, error: str = "", end_time: str = CLEAN_END
+    finished: bool = True,
+    error: str = "",
+    end_time: str = CLEAN_END,
+    execute_id: str | None = None,
 ) -> dict[str, Any]:
-    """Build a job/status response."""
-    return {
+    """Build a job/status response.
+
+    ``executeId`` is left out unless given, as from rclone versions before it.
+    """
+    resp: dict[str, Any] = {
         "duration": 12.5,
         "endTime": end_time if finished else "0001-01-01T00:00:00Z",
         "error": error,
@@ -41,6 +48,9 @@ def status(
         "startTime": "2026-09-03T04:19:58.000000-04:00",
         "success": finished and error == "",
     }
+    if execute_id is not None:
+        resp["executeId"] = execute_id
+    return resp
 
 
 def stats(errors: int = 0, **overrides: Any) -> dict[str, Any]:
@@ -80,11 +90,14 @@ def poll(api: API, devices: list[Device], resp, statsresp) -> list[Device]:
     return api.get_jobstatus(devices)
 
 
-def start(devices: list[Device], jobid: int = JOBID) -> list[Device]:
+def start(
+    devices: list[Device], jobid: int = JOBID, execute_id: str | None = None
+) -> list[Device]:
     """Attach a job id the way coordinator.start_job does -- parent only."""
     for device in devices:
         if device.device_type == DeviceType.JOB_SWITCH:
             device.rclonejobid = jobid
+            device.execute_id = execute_id
     return devices
 
 
@@ -192,19 +205,69 @@ class TestNonfatalErrorsOption:
         assert state_of(result, DeviceType.LAST_SUCCESS_SENSOR) == CLEAN_END
 
 
-class TestJobNotFound:
-    """A job rclone has forgotten is not a success."""
+NOT_FOUND = {"error": "job not found"}
 
-    def test_counts_as_a_failure(self, devices) -> None:
+
+class TestJobLost:
+    """A job rclone can no longer report on ends the run, as a failure.
+
+    Two ways in: rclone answers "job not found" (the rcd restarted, or the job
+    expired before we polled it), or the jobid now belongs to a different rcd.
+    """
+
+    def test_not_found_counts_as_a_failure(self, devices) -> None:
         """We cannot get a verdict, so we assume the worst but keep the good one."""
         api = make_api()
         poll(api, devices, status(), stats())  # a good run first
-        api.jobstats_call = lambda jobid: stats()  # type: ignore[method-assign]
-        api.jobstatus_call = lambda jobid: {"error": "job not found"}  # type: ignore[method-assign]
-        with pytest.raises(APIConnectionError):
-            raise api.get_jobstatus(start(devices))
+        poll(api, start(devices), NOT_FOUND, stats())
         assert state_of(devices, DeviceType.HEALTH_SENSOR) is True
         assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) == CLEAN_END
+        assert "job not found" in state_of(devices, DeviceType.LAST_ERROR_SENSOR)
+
+    def test_not_found_turns_the_switch_off(self, devices) -> None:
+        """The switch used to stay on forever, claiming a dead job was running."""
+        api = make_api()
+        poll(api, devices, status(finished=False), stats())
+        assert state_of(devices, DeviceType.JOB_SWITCH) is True
+        poll(api, devices, NOT_FOUND, stats())
+        assert state_of(devices, DeviceType.JOB_SWITCH) is False
+
+    def test_not_found_is_only_processed_once(self, devices) -> None:
+        """Like a finished run, a lost one clears the jobid and is not re-polled."""
+        api = make_api()
+        poll(api, devices, NOT_FOUND, stats())
+        assert all(d.rclonejobid == 0 and d.execute_id is None for d in devices)
+        assert polls_after_the_run_ended(api, devices) == []
+
+    def test_jobid_from_another_rcd_is_not_a_success(self, devices) -> None:
+        """A restarted rcd reuses low jobids; that finished job is not ours."""
+        api = make_api()
+        start(devices, execute_id=EXECUTE_ID)
+        poll(api, devices, status(execute_id="a-later-rcd"), stats())
+        assert state_of(devices, DeviceType.JOB_SWITCH) is False
+        assert state_of(devices, DeviceType.HEALTH_SENSOR) is True
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) is None
+        assert state_of(devices, DeviceType.LAST_ERROR_SENSOR) == (
+            "job lost: rclone restarted"
+        )
+
+    def test_matching_execute_id_is_processed_normally(self, devices) -> None:
+        """The check must not reject our own job."""
+        start(devices, execute_id=EXECUTE_ID)
+        poll(make_api(), devices, status(execute_id=EXECUTE_ID), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) == CLEAN_END
+
+    def test_rclone_without_execute_id_is_trusted(self, devices) -> None:
+        """Older rclone versions report no executeId; fall back to the jobid."""
+        start(devices, execute_id=EXECUTE_ID)
+        poll(make_api(), devices, status(), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) == CLEAN_END
+
+    def test_finishing_clears_the_execute_id(self, devices) -> None:
+        """A finished run leaves nothing behind for the store to resume."""
+        start(devices, execute_id=EXECUTE_ID)
+        poll(make_api(), devices, status(execute_id=EXECUTE_ID), stats())
+        assert all(d.rclonejobid == 0 and d.execute_id is None for d in devices)
 
 
 def polls_after_the_run_ended(api: API, devices: list[Device]) -> list[int]:

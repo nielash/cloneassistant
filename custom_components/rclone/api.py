@@ -100,6 +100,10 @@ class Device:
     state: int | float | bool | None
     rclonejobid: int
     atts: dict[str, Any] | None = None
+    # The rcd's instance id, which rclone regenerates on every restart. Job ids
+    # start again from 1 in the new process, so only (rclonejobid, execute_id)
+    # identifies a job; a jobid alone can match some unrelated later job.
+    execute_id: str | None = None
 
 
 class API:
@@ -172,7 +176,18 @@ class API:
         resp = self.jobstatus_call(parent.rclonejobid)
 
         if resp["error"] == "job not found":
-            raise self.handle_job_not_found(devices)
+            # Either the rcd restarted, or the job finished and expired
+            # (--rc-job-expire-duration) before we polled it.
+            return self.handle_job_lost(
+                devices, "job not found (rclone restarted, or the job expired)"
+            )
+        # Older rclone versions do not report executeId; trust the jobid there.
+        if parent.execute_id and resp.get("executeId", parent.execute_id) != (
+            parent.execute_id
+        ):
+            # Same jobid, different rcd: ours died with the old process, and the
+            # job now at this id is some later, unrelated call.
+            return self.handle_job_lost(devices, "job lost: rclone restarted")
 
         statsresp = self.jobstats_call(parent.rclonejobid)
 
@@ -245,19 +260,30 @@ class API:
             if resp["finished"]:
                 # clear jobid when job is finished
                 device.rclonejobid = 0
+                device.execute_id = None
 
         return devices
 
-    def handle_job_not_found(self, devices) -> Exception:
-        """Handle the case where we know the jobid but can't determine its status."""
-        self.connected = False
+    def handle_job_lost(self, devices: list[Device], reason: str) -> list[Device]:
+        """End a run whose job we know about but rclone can no longer report on.
+
+        This is a completion like any other -- it clears the jobid, so it is
+        processed exactly once -- and it must turn the switch off: left on, the
+        switch claimed the job was still running for as long as HA stayed up.
+        A run we can no longer get a verdict for is not a success, so Last
+        Success Time is left alone.
+        """
         for device in devices:
             device.rclonejobid = 0
-            if device.device_type == DeviceType.HEALTH_SENSOR:
-                device.state = True
-            if device.device_type == DeviceType.LAST_ERROR_SENSOR:
-                device.state = "job not found"
-        return APIConnectionError("job not found")
+            device.execute_id = None
+            match device.device_type:
+                case DeviceType.JOB_SWITCH:
+                    device.state = False
+                case DeviceType.HEALTH_SENSOR:
+                    device.state = True
+                case DeviceType.LAST_ERROR_SENSOR:
+                    device.state = reason
+        return devices
 
     def last_error_state(self, device, resp, statsresp) -> str | None:
         """Determine the state of the last error sensor."""
@@ -399,8 +425,13 @@ class API:
             case _:
                 return 0
 
-    async def async_job_call(self, method: str, payload: dict[str, Any]) -> int:
-        """Make an asynchronous API call to rclone and return the job ID."""
+    async def async_job_call(
+        self, method: str, payload: dict[str, Any]
+    ) -> tuple[int, str | None]:
+        """Make an asynchronous API call to rclone and return the job ID.
+
+        Returned with the rcd's executeId, which older rclone versions omit.
+        """
         payload["_async"] = True
         url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
         self.connected = True  # if we can make a successful call, we are connected. If not, an exception will be raised.
@@ -414,11 +445,11 @@ class API:
                 _LOGGER.debug("Status: %s", response.status)
                 response_json = await response.json()
                 _LOGGER.info(response_json)
-                return response_json["jobid"]
+                return response_json["jobid"], response_json.get("executeId")
         except Exception as err:
             self.connected = False
             raise APIConnectionError("Error connecting to API.") from err
-        return 0
+        return 0, None
 
     async def async_stop_job_call(self, job_id: int):
         """Make an asynchronous API call to attempt to stop an rclone job."""
