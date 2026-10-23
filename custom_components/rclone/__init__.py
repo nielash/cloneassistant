@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .coordinator import RcloneCoordinator
+from .coordinator import RcloneCoordinator, job_store
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +60,9 @@ async def async_setup_entry(
     # This calls the async_setup method in each of the entity type files.
     await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
+    # Pick up a run that was still going when HA stopped.
+    await coordinator.async_restore_job()
+
     # Return true to note a successful setup.
     return True
 
@@ -87,3 +90,8 @@ async def async_unload_entry(
 
     # Unload platforms and return result
     return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+    """Delete the stored job along with the config entry."""
+    await job_store(hass, config_entry.entry_id).async_remove()

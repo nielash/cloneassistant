@@ -17,6 +17,7 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import API, APIAuthError, Device, DeviceType
@@ -24,9 +25,21 @@ from .const import (
     COMMAND_ARGS,
     COUNT_ERRORS_AS_FAILURE,
     DEFAULT_COUNT_ERRORS_AS_FAILURE,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+JOB_STORE_VERSION = 1
+
+
+def job_store(hass: HomeAssistant, entry_id: str) -> Store[dict[str, Any]]:
+    """Return the store holding the job a config entry is waiting on.
+
+    The jobid otherwise lives only in memory, so a restart or reload of Home
+    Assistant used to forget a run that was still going.
+    """
+    return Store(hass, JOB_STORE_VERSION, f"{DOMAIN}.job.{entry_id}")
 
 
 @dataclass
@@ -86,6 +99,41 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
             friendly_name=self.friendly_name,
             count_errors_as_failure=self.count_errors_as_failure,
         )
+        self._job_store = job_store(hass, config_entry.entry_id)
+        self._saved_job: dict[str, Any] | None = None
+
+    async def async_restore_job(self) -> None:
+        """Resume polling a job that was running when Home Assistant stopped.
+
+        Called once the platforms are set up, which keeps the first refresh to
+        building the devices. Correctness does not depend on that order: a run
+        that succeeded while HA was down sets Last Success Time here, and the
+        sensor's restore never overwrites a value that is already set.
+        """
+        job = await self._job_store.async_load()
+        parent = self.api.get_parent(self.data.devices)
+        if not job or not job.get("jobid") or not parent:
+            return
+        parent.rclonejobid = int(job["jobid"])
+        parent.execute_id = job.get("execute_id")
+        self._saved_job = job
+        await self.async_refresh()
+
+    async def _async_save_job(self, devices: list[Device]) -> None:
+        """Keep the store in step with the job the parent device is waiting on."""
+        parent = self.api.get_parent(devices)
+        job = (
+            {"jobid": parent.rclonejobid, "execute_id": parent.execute_id}
+            if parent and parent.rclonejobid
+            else None
+        )
+        if job == self._saved_job:
+            return
+        self._saved_job = job
+        if job:
+            await self._job_store.async_save(job)
+        else:
+            await self._job_store.async_remove()
 
     async def async_update_data(self):
         """Fetch data from API endpoint.
@@ -101,6 +149,7 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
                 devices = await self.hass.async_add_executor_job(
                     partial(self.api.get_jobstatus, self.data.devices)
                 )
+                await self._async_save_job(devices)
         except APIAuthError as err:
             _LOGGER.error(err)
             raise UpdateFailed(err) from err
@@ -130,16 +179,18 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
         try:
             payload = parse_json(self.command_args)
             if payload is not None:
-                job_id = await self.api.async_job_call(
+                job_id, execute_id = await self.api.async_job_call(
                     self.rclone_command,
                     payload,
                 )
                 device = self.get_device_by_id(device_type, device_id)
                 if device and job_id > 0:
                     device.rclonejobid = job_id
+                    device.execute_id = execute_id
                 await self.hass.async_add_executor_job(
                     partial(self.api.get_jobstatus, self.data.devices)
                 )
+                await self._async_save_job(self.data.devices)
         except APIAuthError as err:
             _LOGGER.error(err)
             raise UpdateFailed(err) from err
