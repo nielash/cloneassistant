@@ -1,50 +1,50 @@
 {
-    "config": {
-        "abort": {
-            "already_configured": "Job is already configured",
-            "reconfigure_successful": "Reconfiguration successful"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
-        },
-        "step": {
-            "reconfigure": {
-                "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Username"
-                },
-                "data_description": {
-                    "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
-                }
-            },
-            "user": {
-                "data": {
-                    "host": "Host",
-                    "password": "Password",
-                    "username": "Username"
-                },
-                "data_description": {
-                    "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
-                }
-            }
-        }
+  "config": {
+    "abort": {
+      "already_configured": "Job is already configured",
+      "reconfigure_successful": "Reconfiguration successful"
     },
-    "options": {
-        "step": {
-            "init": {
-                "data": {
-                    "count_errors_as_failure": "Count runs with errors as failed",
-                    "scan_interval": "Scan Interval (seconds)"
-                },
-                "data_description": {
-                    "count_errors_as_failure": "A run can report no error while still leaving errors in its stats. A check that could not list a subdirectory is the usual case: everything it compared matched, but it did not get to see everything. Turn this on to treat those runs as failures for Last Success Time."
-                },
-                "description": "Edit the options.",
-                "title": "Rclone Integration Options"
-            }
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "invalid_auth": "Invalid authentication",
+      "unknown": "Unexpected error"
+    },
+    "step": {
+      "reconfigure": {
+        "data": {
+          "host": "Host",
+          "password": "Password",
+          "username": "Username"
+        },
+        "data_description": {
+          "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
         }
+      },
+      "user": {
+        "data": {
+          "host": "Host",
+          "password": "Password",
+          "username": "Username"
+        },
+        "data_description": {
+          "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
+        }
+      }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "count_errors_as_failure": "Count runs with errors as failed",
+          "scan_interval": "Scan Interval (seconds)"
+        },
+        "data_description": {
+          "count_errors_as_failure": "A run can report no error while still leaving errors in its stats. A check that could not list a subdirectory is the usual case: everything it compared matched, but it did not get to see everything. Turn this on to treat those runs as failures for Last Success Time."
+        },
+        "description": "Edit the options.",
+        "title": "Rclone Integration Options"
+      }
+    }
+  }
 }

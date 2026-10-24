@@ -9,7 +9,7 @@ Control and monitor your recurring [Rclone](https://rclone.org) jobs from [Home 
 - Control and monitor Rclone jobs running on another device, via the [rc](https://rclone.org/rc/) API
 - Start/Stop a job from a Home Assistant "switch" device
 - Customizable sensors to monitor job stats and health
-- Track when each job last *succeeded*, so you can alert on jobs that have been failing for hours
+- Track when each job last _succeeded_, so you can alert on jobs that have been failing for hours
 - Easily build custom automations and dashboards
 - Fully local by default – no cloud access required
 
@@ -22,8 +22,9 @@ The rclone jobs you monitor do not need to be running on the same machine as Hom
 <details>
   <summary>More screenshots</summary>
 
-  ![Screenshot of the Config Entities page](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config_Entities.png) ![Screenshot of the config options form](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config.png)
-  ![Screenshot of the Switch entity](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Switch.png) ![Screenshot of a Transfers graph](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Transfers_Graph.png)
+![Screenshot of the Config Entities page](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config_Entities.png) ![Screenshot of the config options form](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Config.png)
+![Screenshot of the Switch entity](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Switch.png) ![Screenshot of a Transfers graph](https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Transfers_Graph.png)
+
 </details>
 
 ## Quick Start
@@ -33,17 +34,17 @@ The rclone jobs you monitor do not need to be running on the same machine as Hom
 
 1. Start [rclone](https://rclone.org/) with [remote control listening](https://rclone.org/commands/rclone_rcd/):
 
-    ```sh
-    rclone rcd -vv --rc-addr=localhost:5572 --rc-user=SOME_USERNAME --rc-pass=SOME_PASSWORD --rc-job-expire-duration=1h
-    ```
+   ```sh
+   rclone rcd -vv --rc-addr=localhost:5572 --rc-user=SOME_USERNAME --rc-pass=SOME_PASSWORD --rc-job-expire-duration=1h
+   ```
 
 2. Install [integration](https://github.com/nielash/cloneassistant):
 
-    Copy the `custom_components/rclone` directory into your Home Assistant `config/custom_components` directory, and restart Home Assistant.
+   Copy the `custom_components/rclone` directory into your Home Assistant `config/custom_components` directory, and restart Home Assistant.
 
 3. Click "[Add Entry](http://homeassistant.local:8123/config/integrations/integration/rclone)" button and follow setup wizard
 
-    [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=rclone)
+   [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=rclone)
 
 ## Installation
 
@@ -106,18 +107,18 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
 
 2. Copy the `custom_components/rclone` directory into your Home Assistant `config/custom_components` directory, including the `rclone` folder itself.
 
-    The following example shows how to do this using rclone, assuming you have set up an [`smb`](https://rclone.org/smb/) remote named `homeassistant:`
+   The following example shows how to do this using rclone, assuming you have set up an [`smb`](https://rclone.org/smb/) remote named `homeassistant:`
 
-    ```sh
-    # download repo zip from github
-    rclone copyurl "https://github.com/nielash/cloneassistant/archive/refs/heads/main.zip" cloneassistant.zip
+   ```sh
+   # download repo zip from github
+   rclone copyurl "https://github.com/nielash/cloneassistant/archive/refs/heads/main.zip" cloneassistant.zip
 
-    # extract it locally
-    rclone archive extract cloneassistant.zip cloneassistant_extracted
+   # extract it locally
+   rclone archive extract cloneassistant.zip cloneassistant_extracted
 
-    # copy to HA config/custom_components directory
-    rclone sync cloneassistant_extracted/cloneassistant-main/custom_components/rclone homeassistant:config/custom_components/rclone --exclude "userfiles/**"
-    ```
+   # copy to HA config/custom_components directory
+   rclone sync cloneassistant_extracted/cloneassistant-main/custom_components/rclone homeassistant:config/custom_components/rclone --exclude "userfiles/**"
+   ```
 
 3. [Restart](https://www.home-assistant.io/docs/configuration/#reloading-the-configuration-to-apply-changes) Home Assistant.
 
@@ -125,27 +126,27 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
 
 1. Navigate to Settings > Devices & services > Add integration and search "rclone", or use this shortcut:
 
-    [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=rclone)
+   [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=rclone)
 
 2. Follow the config wizard to configure your first rclone job. (An "entry" here corresponds to one rclone command.)
 
 > [!NOTE]
 > When you configure a command and click "Submit", Home Assistant will verify that it can connect to rclone successfully. However, it will not actually run your configured command. To run it, use the provided "switch" device in the UI, or create an [automation](https://www.home-assistant.io/getting-started/automation/) that uses it as an "action".
 
-| Setting | Description | Example |
-| ----------- | ----------- | ----------- |
-| `friendly_name` | A human-friendly name to identify this rclone command. Tip: keep this short. | `Bisync Laptop` |
-| `Host` | the `--rc-addr` for this job. Prefix it with `https://` if rclone serves TLS ([`--rc-cert`](https://rclone.org/commands/rclone_rcd/#tls-ssl)) or sits behind an HTTPS reverse proxy. The certificate must be one Home Assistant trusts (e.g. Let's Encrypt); self-signed certificates are not supported. Anything after the port is used as the [`--rc-baseurl`](https://rclone.org/commands/rclone_rcd/#server-options). | `192.168.12.34:5572` or `https://rclone.example.com` |
-| `Username` | the `--rc-user` for this job | `nielash` |
-| `Password` | the `--rc-pass` for this job | `ZqOa*c!U8O^L1P&Xfi8#` |
-| `scan_interval` | number of seconds to wait between stats refreshes, while job is running. Default: `60`, Minimum: `5`. Shorter intervals will use more resources. | `5` |
-| `command` | the [rc method](https://rclone.org/rc/#supported-commands) (rclone command) you wish to run. | `sync/bisync` |
-| `command_args` | the parameters (flags) for the command, in [JSON blob format](https://rclone.org/rc/#json-input). See [examples](#command_args-json-examples) below. Must be [valid JSON](https://www.json.fr/). Note that `_async = true` will be added automatically; it does not need to be supplied. | `{"path1": "/some/local/path", "path2": "some_remote:path", "filtersFile": "/some/filters.txt"}` |
+| Setting         | Description                                                                                                                                                                                                                                                                                                                                                                                                               | Example                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `friendly_name` | A human-friendly name to identify this rclone command. Tip: keep this short.                                                                                                                                                                                                                                                                                                                                              | `Bisync Laptop`                                                                                  |
+| `Host`          | the `--rc-addr` for this job. Prefix it with `https://` if rclone serves TLS ([`--rc-cert`](https://rclone.org/commands/rclone_rcd/#tls-ssl)) or sits behind an HTTPS reverse proxy. The certificate must be one Home Assistant trusts (e.g. Let's Encrypt); self-signed certificates are not supported. Anything after the port is used as the [`--rc-baseurl`](https://rclone.org/commands/rclone_rcd/#server-options). | `192.168.12.34:5572` or `https://rclone.example.com`                                             |
+| `Username`      | the `--rc-user` for this job                                                                                                                                                                                                                                                                                                                                                                                              | `nielash`                                                                                        |
+| `Password`      | the `--rc-pass` for this job                                                                                                                                                                                                                                                                                                                                                                                              | `ZqOa*c!U8O^L1P&Xfi8#`                                                                           |
+| `scan_interval` | number of seconds to wait between stats refreshes, while job is running. Default: `60`, Minimum: `5`. Shorter intervals will use more resources.                                                                                                                                                                                                                                                                          | `5`                                                                                              |
+| `command`       | the [rc method](https://rclone.org/rc/#supported-commands) (rclone command) you wish to run.                                                                                                                                                                                                                                                                                                                              | `sync/bisync`                                                                                    |
+| `command_args`  | the parameters (flags) for the command, in [JSON blob format](https://rclone.org/rc/#json-input). See [examples](#command_args-json-examples) below. Must be [valid JSON](https://www.json.fr/). Note that `_async = true` will be added automatically; it does not need to be supplied.                                                                                                                                  | `{"path1": "/some/local/path", "path2": "some_remote:path", "filtersFile": "/some/filters.txt"}` |
 
-   #### `command_args` JSON Examples
+#### `command_args` JSON Examples
 
-  > [!TIP]
-  > Use a [JSON validator](https://www.json.fr/) to validate (and beautify) your JSON.
+> [!TIP]
+> Use a [JSON validator](https://www.json.fr/) to validate (and beautify) your JSON.
 
 - [Bisync JSON Example](https://github.com/nielash/cloneassistant/blob/main/examples/commands/bisync_example.json)
   - Reference: <https://rclone.org/rc/#sync-bisync>
@@ -251,7 +252,7 @@ a success if rclone reported no error.
 
 A run can report no error and still leave errors in its stats. The clearest case is
 `operations/check`, the default command: it counts every error it runs into, but only
-returns one if it found actual *differences*. So a subdirectory it could not list leaves
+returns one if it found actual _differences_. So a subdirectory it could not list leaves
 the run "successful" with a nonzero **Errors** sensor -- everything it managed to compare
 matched, but it did not get to see everything. If you would rather treat that as a
 failure, enable **Count runs with errors as failed** in the integration's options (see
@@ -259,7 +260,7 @@ failure, enable **Count runs with errors as failed** in the integration's option
 
 > [!NOTE]
 > This is not about retries. A file that fails and then succeeds on a retry is not counted
-> as an error at all, and a file that stays unreadable is counted *and* reported as the
+> as an error at all, and a file that stays unreadable is counted _and_ reported as the
 > job's error, so it already fails without this option. Note also that rclone's high-level
 > `--retries` does not apply to jobs started over the rc API -- only `--low-level-retries`
 > does.
@@ -283,7 +284,7 @@ The settings you configured in the previous steps can be easily re-configured as
 
 1. Navigate to the [integration page](https://my.home-assistant.io/redirect/integration/?domain=rclone)
 
-    [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=rclone)
+   [![Open your Home Assistant instance and show an integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=rclone)
 
 2. To edit the `scan_interval`, `command`, `command_args`, or `count_errors_as_failure`, click the "gear" icon corresponding to the entry for the command.
 

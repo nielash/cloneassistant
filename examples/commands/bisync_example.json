@@ -16,9 +16,7 @@
   "createEmptySrcDirs": true,
   "_config": {
     "CheckSum": true,
-    "DisableFeatures": [
-      "ListR"
-    ],
+    "DisableFeatures": ["ListR"],
     "Checkers": 16,
     "Metadata": true,
     "LogLevel": "INFO",

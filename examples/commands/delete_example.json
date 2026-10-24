@@ -4,8 +4,6 @@
     "LogLevel": "Info"
   },
   "_filter": {
-    "IncludeRule": [
-      ".DS_Store.conflict*"
-    ]
+    "IncludeRule": [".DS_Store.conflict*"]
   }
 }

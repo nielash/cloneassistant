@@ -8,12 +8,7 @@
     "StatsFileNameLength": 100
   },
   "_filter": {
-    "FilterFrom": [
-      "/Users/nielash/Rclone/Filters/bisync_combined_filters.txt"
-    ],
-    "FilterRule": [
-      "- /.DS_Store",
-      "- .DS_Store"
-    ]
+    "FilterFrom": ["/Users/nielash/Rclone/Filters/bisync_combined_filters.txt"],
+    "FilterRule": ["- /.DS_Store", "- .DS_Store"]
   }
 }
