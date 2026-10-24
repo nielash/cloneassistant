@@ -309,7 +309,7 @@ def test_completion_is_only_processed_once(devices) -> None:
 # scalar DeviceType, which is how every one of these came to be 0.
 EXPECTED_DEFAULTS = {
     DeviceType.JOB_SWITCH: False,
-    DeviceType.HEALTH_SENSOR: False,
+    DeviceType.HEALTH_SENSOR: None,
     DeviceType.DURATION_SENSOR: 0,
     DeviceType.ETA_SENSOR: 0,
     DeviceType.OTHER: 0,

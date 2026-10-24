@@ -139,9 +139,9 @@ async def test_health_is_not_restored(
     mock_restore_cache(hass, (State(HEALTH, "on"),))
     await setup_integration()
 
-    # No job has been polled yet, so the device is at its default of False.
-    assert hass.states.get(HEALTH).state != STATE_UNKNOWN
-    assert hass.states.get(HEALTH).state == "off"
+    # No run has been polled yet, so there is nothing to report -- neither the
+    # stale Problem nor a made-up OK.
+    assert hass.states.get(HEALTH).state == STATE_UNKNOWN
 
 
 async def test_last_success_is_unknown_on_a_fresh_install(
