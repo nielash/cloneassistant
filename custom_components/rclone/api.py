@@ -391,7 +391,11 @@ class API:
             case DeviceType.JOB_SWITCH:
                 return False
             case DeviceType.HEALTH_SENSOR:
-                return False
+                # Unknown until a run has been polled. Starting at OK claimed
+                # a verdict nobody had checked; the switch's False is
+                # different, since with no stored job HA knows none of its jobs
+                # is running.
+                return None
             case DeviceType.BYTES_SENSOR | DeviceType.TOTAL_BYTES_SENSOR:
                 return None
             case DeviceType.DURATION_SENSOR | DeviceType.ETA_SENSOR:

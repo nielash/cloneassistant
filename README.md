@@ -267,6 +267,12 @@ failure, enable **Count runs with errors as failed** in the integration's option
 The **Health** binary sensor is deliberately unaffected by that option, so existing
 automations watching it keep behaving exactly as before.
 
+**Health** reads `unknown` after Home Assistant starts, until the integration has polled a
+run: it reports what rclone says about a run, and until then there is nothing to report. (It
+used to read OK at startup, which claimed a verdict nobody had checked.) While a run is in
+flight it reads OK unless rclone has already reported an error, as before. If a run was
+still going when Home Assistant stopped, it is picked up again right away.
+
 ### 6. (Optional) Set up a Dashboard
 
 While it's easy enough to monitor entities from the default "device" page, you may want to set up a "Dashboard" to emphasize the jobs and metrics that are most important to you, and customize how they are displayed. Designing dashboards is a huge topic and beyond the scope of this tutorial, but for convenience, an [example template](https://github.com/nielash/cloneassistant/blob/main/examples/dashboards/rclone_dashboard.yaml) is provided. You will need to replace the entities with your own.
