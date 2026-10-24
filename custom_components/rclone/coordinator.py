@@ -165,14 +165,14 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
     ) -> Device | None:
         """Return device by device id."""
         # Called by the binary sensors and sensors to get their updated data from self.data
-        try:
-            return [
+        return next(
+            (
                 device
                 for device in self.data.devices
                 if device.device_type == device_type and device.device_id == device_id
-            ][0]
-        except IndexError:
-            return None
+            ),
+            None,
+        )
 
     async def start_job(self, device_type: DeviceType, device_id: int) -> None:
         """Start the job."""

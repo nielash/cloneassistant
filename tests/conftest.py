@@ -3,7 +3,9 @@
 from unittest.mock import patch
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.rclone.const import CHECK, COMMAND_ARGS, DOMAIN
 from homeassistant.const import (
     CONF_COMMAND,
     CONF_FRIENDLY_NAME,
@@ -13,10 +15,6 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
-
-from custom_components.rclone.const import CHECK, COMMAND_ARGS, DOMAIN
-
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 VERSION_INFO = {
     "version": "v1.71.0",
@@ -59,9 +57,7 @@ def setup_integration_fixture(
     async def _setup() -> MockConfigEntry:
         config_entry.add_to_hass(hass)
         with (
-            patch(
-                "custom_components.rclone.api.API.noopauth_call", return_value=True
-            ),
+            patch("custom_components.rclone.api.API.noopauth_call", return_value=True),
             patch(
                 "custom_components.rclone.api.API.version", return_value=VERSION_INFO
             ),

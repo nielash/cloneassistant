@@ -1,0 +1,11 @@
+# Ruff settings, used by `trunk check` / `trunk fmt` and by any editor running
+# Ruff. Recent Ruff defaults already cover most of Home Assistant's rule set;
+# the isort settings are Home Assistant core's, which the integration's imports
+# already followed.
+target-version = "py313"
+
+[lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+combine-as-imports = true
+split-on-trailing-comma = false

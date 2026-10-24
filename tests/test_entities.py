@@ -1,18 +1,9 @@
 """Tests for entity naming and for the state that has to survive a restart."""
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, patch
-
-from homeassistant.components.sensor import SensorExtraStoredData
-from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant, State
-from homeassistant.helpers import entity_registry as er
-
-from custom_components.rclone.api import DeviceType
-from custom_components.rclone.const import DOMAIN
-from custom_components.rclone.sensor import LastSuccessSensor
 
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -20,20 +11,21 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from .test_api_run_outcome import (
-    EXECUTE_ID,
-    JOBID,
-    LATER_END,
-    NOT_FOUND,
-    stats,
-    status,
-)
+from custom_components.rclone.api import DeviceType
+from custom_components.rclone.const import DOMAIN
+from custom_components.rclone.sensor import LastSuccessSensor
+from homeassistant.components.sensor import SensorExtraStoredData
+from homeassistant.const import STATE_UNKNOWN
+from homeassistant.core import HomeAssistant, State
+from homeassistant.helpers import entity_registry as er
+
+from .test_api_run_outcome import EXECUTE_ID, JOBID, LATER_END, NOT_FOUND, stats, status
 
 LAST_SUCCESS = "sensor.bisync_last_success_time"
 HEALTH = "binary_sensor.bisync_health"
 JOB_SWITCH = "switch.bisync"
 
-SUCCEEDED_AT = datetime(2026, 9, 3, 8, 20, 11, tzinfo=timezone.utc)
+SUCCEEDED_AT = datetime(2026, 9, 3, 8, 20, 11, tzinfo=UTC)
 
 
 def enable_last_success(hass: HomeAssistant) -> None:
@@ -93,9 +85,7 @@ async def test_entity_ids_are_prefixed_with_the_device(
     assert hass.states.get(JOB_SWITCH).attributes["friendly_name"] == "Bisync"
 
 
-async def test_unique_ids_are_unchanged(
-    hass: HomeAssistant, setup_integration
-) -> None:
+async def test_unique_ids_are_unchanged(hass: HomeAssistant, setup_integration) -> None:
     """Renaming must not orphan the entities of an existing install."""
     await setup_integration()
 
@@ -127,9 +117,7 @@ async def test_last_success_time_is_restored(
     assert device.state == SUCCEEDED_AT.isoformat()
 
 
-async def test_health_is_not_restored(
-    hass: HomeAssistant, setup_integration
-) -> None:
+async def test_health_is_not_restored(hass: HomeAssistant, setup_integration) -> None:
     """Health deliberately has no restore behavior.
 
     It describes the run rclone last reported on. Replaying a stale Problem
@@ -177,9 +165,7 @@ async def test_restore_never_clobbers_a_known_value(
     """
     entry = await setup_integration()
     coordinator = entry.runtime_data.coordinator
-    device = next(
-        d for d in coordinator.data.devices if d.name == "Last Success Time"
-    )
+    device = next(d for d in coordinator.data.devices if d.name == "Last Success Time")
     fresher = "2026-09-05T10:00:00+00:00"
     device.state = fresher
 
@@ -213,9 +199,7 @@ def stored_job(jobid: int = JOBID) -> dict[str, Any]:
 def rclone_reports(resp: dict[str, Any], statsresp: dict[str, Any] | None = None):
     """Answer job/status and core/stats with canned responses."""
     with (
-        patch(
-            "custom_components.rclone.api.API.jobstatus_call", return_value=resp
-        ),
+        patch("custom_components.rclone.api.API.jobstatus_call", return_value=resp),
         patch(
             "custom_components.rclone.api.API.jobstats_call",
             return_value=statsresp or stats(),

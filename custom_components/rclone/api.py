@@ -97,7 +97,8 @@ class Device:
     device_type: DeviceType
     name: str
     parent_name: str
-    state: int | float | bool | None
+    # str for Last Error, and for Last Success Time (an ISO timestamp).
+    state: int | float | bool | str | None
     rclonejobid: int
     atts: dict[str, Any] | None = None
     # The rcd's instance id, which rclone regenerates on every restart. Job ids

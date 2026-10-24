@@ -1,0 +1,13 @@
+# Test-only dependencies. The integration itself declares no requirements --
+# see manifest.json -- because it talks to rclone over plain HTTP.
+#
+# pytest-homeassistant-custom-component pins the Home Assistant version it
+# tests against. 0.13.316 is the newest release and ships HA 2026.2.3, which is
+# one minor behind the 2026.3.1 minimum declared in hacs.json -- so the tests
+# run slightly below the floor we support rather than above it. Bump this when
+# a release catching up to 2026.3 appears.
+pytest-homeassistant-custom-component==0.13.316
+
+# Type stubs for mypy (the VS Code Mypy extension reads them from .venv). The
+# integration imports requests; Home Assistant provides it at runtime.
+types-requests

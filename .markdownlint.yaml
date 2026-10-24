@@ -1,0 +1,37 @@
+# markdownlint settings, read by `trunk check` and by the VS Code markdownlint
+# extension alike.
+
+# Rules that conflict with Prettier (`trunk fmt`), which owns formatting. This
+# is markdownlint's own markdownlint/style/prettier, written out because the
+# editor extension cannot load it with `extends`. Two of these matter for this
+# README beyond formatting: no-blanks-blockquote would flag the blank line that
+# keeps back-to-back GitHub alerts separate, and ol-prefix would flag the
+# install steps that alerts interrupt (GitHub still numbers them 1, 2, 3).
+blanks-around-fences: false
+blanks-around-headings: false
+blanks-around-lists: false
+code-fence-style: false
+emphasis-style: false
+heading-start-left: false
+heading-style: false
+hr-style: false
+line-length: false
+list-indent: false
+list-marker-space: false
+no-blanks-blockquote: false
+no-hard-tabs: false
+no-missing-space-atx: false
+no-missing-space-closed-atx: false
+no-multiple-blanks: false
+no-multiple-space-atx: false
+no-multiple-space-blockquote: false
+no-multiple-space-closed-atx: false
+no-trailing-spaces: false
+ol-prefix: false
+strong-style: false
+ul-indent: false
+
+# The README lays out screenshots with sized <img> tags and folds extras into
+# <details>; other inline HTML is still flagged.
+no-inline-html:
+  allowed_elements: [img, details, summary]
