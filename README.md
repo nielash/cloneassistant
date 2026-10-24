@@ -2,7 +2,7 @@
 
 Control and monitor your recurring [Rclone](https://rclone.org) jobs from [Home Assistant dashboards](https://www.home-assistant.io/dashboards/).
 
-<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/History_Dashboard.png" width="300"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Sensors.png" width="300">
+<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/History_Dashboard.png" width="300" alt="Phone screenshot of a Home Assistant history dashboard: timelines of a Bisync Desktop job switch, its Health, and its Last Error over the past hour and the past several hours, above a Total Bytes graph"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Sensors.png" width="300" alt="Phone screenshot of the sensors for a Bisync job during a run: Last Error, start and end times, Duration, ETA, Total Transfers, Total Bytes, Total Checks, Deletes, Listed, Renames, Speed, Errors and more">
 
 ## Features
 
@@ -17,7 +17,7 @@ This is intended for a particular use case: you have one or more rclone commands
 
 The rclone jobs you monitor do not need to be running on the same machine as Home Assistant. For example, Home Assistant can monitor rclone jobs running on multiple different LAN-connected computers. It can also run concurrent async jobs on the same machine, while managing the concurrency efficiently and tracking stats separately.
 
-<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Device.png" width="300"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Jobs_Timeline.png" width="300">
+<img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Device.png" width="300" alt="Phone screenshot of the Bisync Desktop device page in Home Assistant: rclone version and platform under Device info, the job's on/off switch under Controls, and the start of its Sensors list"> <img src="https://raw.githubusercontent.com/nielash/cloneassistant/main/docs/media/Jobs_Timeline.png" width="300" alt="Phone screenshot of a Jobs timeline: on/off history and Health for seven rclone jobs across two machines over about two hours">
 
 <details>
   <summary>More screenshots</summary>

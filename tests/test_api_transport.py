@@ -7,9 +7,9 @@ arrives, so they check both HTTP clients api.py uses (requests and aiohttp).
 
 import asyncio
 import base64
-import json
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
 from threading import Thread
 from typing import Any
 
