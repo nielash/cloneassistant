@@ -135,7 +135,7 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
 | Setting | Description | Example |
 | ----------- | ----------- | ----------- |
 | `friendly_name` | A human-friendly name to identify this rclone command. Tip: keep this short. | `Bisync Laptop` |
-| `Host` | the `--rc-addr` for this job | `192.168.12.34:5572` |
+| `Host` | the `--rc-addr` for this job. Prefix it with `https://` if rclone serves TLS ([`--rc-cert`](https://rclone.org/commands/rclone_rcd/#tls-ssl)) or sits behind an HTTPS reverse proxy. The certificate must be one Home Assistant trusts (e.g. Let's Encrypt); self-signed certificates are not supported. Anything after the port is used as the [`--rc-baseurl`](https://rclone.org/commands/rclone_rcd/#server-options). | `192.168.12.34:5572` or `https://rclone.example.com` |
 | `Username` | the `--rc-user` for this job | `nielash` |
 | `Password` | the `--rc-pass` for this job | `ZqOa*c!U8O^L1P&Xfi8#` |
 | `scan_interval` | number of seconds to wait between stats refreshes, while job is running. Default: `60`, Minimum: `5`. Shorter intervals will use more resources. | `5` |
