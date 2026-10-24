@@ -127,6 +127,17 @@ class API:
         self.connected: bool = False
         self.version_info: dict[str, Any]
 
+    def _url(self, method: str) -> str:
+        """Return the URL for an rc method.
+
+        A host without a scheme means http://, so entries made before https
+        was supported keep working. Credentials go in an Authorization header
+        rather than the URL: a password with "/", "#" or "?" in it would end
+        the host part of the URL early.
+        """
+        base = self.host if "://" in self.host else f"http://{self.host}"
+        return f"{base.rstrip('/')}/{method}"
+
     @property
     def controller_name(self) -> str:
         """Return the name of the controller."""
@@ -437,14 +448,16 @@ class API:
         Returned with the rcd's executeId, which older rclone versions omit.
         """
         payload["_async"] = True
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
         self.connected = True  # if we can make a successful call, we are connected. If not, an exception will be raised.
         try:
             async with (
                 aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=10), raise_for_status=True
                 ) as session,
-                session.post(url, json=payload) as response,
+                session.post(
+                    url, json=payload, auth=aiohttp.BasicAuth(self.user, self.pwd)
+                ) as response,
             ):
                 _LOGGER.debug("Status: %s", response.status)
                 response_json = await response.json()
@@ -465,10 +478,12 @@ class API:
             _LOGGER.warning("No job to stop for jobid %s", job_id)
             return 0
         _LOGGER.debug(payload)
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
         async with (
             aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session,
-            session.post(url, json=payload) as response,
+            session.post(
+                url, json=payload, auth=aiohttp.BasicAuth(self.user, self.pwd)
+            ) as response,
         ):
             _LOGGER.info("Status: %s", response.status)
             response_json = await response.json()
@@ -481,7 +496,7 @@ class API:
         payload = {
             "jobid": jobid,
         }
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
 
         resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
         response_json = resp.json()
@@ -494,7 +509,7 @@ class API:
         payload = {
             "group": f"job/{jobid}",
         }
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
 
         resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
         response_json = resp.json()
@@ -507,7 +522,7 @@ class API:
         payload = {
             "hello": "world",
         }
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
 
         resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
         response_json = resp.json()
@@ -518,7 +533,7 @@ class API:
         """Retrieve rclone version info."""
         method = "core/version"
         payload: dict[str, str] = {}
-        url = f"http://{self.user}:{self.pwd}@{self.host}/{method}"
+        url = self._url(method)
 
         resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
         response_json = resp.json()
