@@ -1,6 +1,6 @@
 {
+  "name": "Rclone",
   "content_in_root": false,
   "homeassistant": "2026.3.1",
-  "name": "Rclone",
   "persistent_directory": "userfiles"
 }
