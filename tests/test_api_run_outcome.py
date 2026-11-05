@@ -8,7 +8,8 @@ from typing import Any
 
 import pytest
 
-from custom_components.rclone.api import API, Device, DeviceType
+from custom_components.rclone.api import API, Device, DeviceType, build_job_payload
+from custom_components.rclone.const import BISYNC, COPY, SYNC
 
 JOBID = 7
 EXECUTE_ID = "6f1c0f5e-3a38-4a40-9d0b-7c3d1f0e2a11"
@@ -344,3 +345,202 @@ def test_default_values(device_type: DeviceType, expected: Any) -> None:
     """A sensor reports unknown until a run has given it a value."""
     default = make_api().get_device_default_value("1", device_type)
     assert default is expected if expected is None else default == expected
+
+
+PATHS = {"path1": "/a", "path2": "remote:b"}
+
+
+@pytest.mark.parametrize(
+    ("method", "args", "dry_run", "resync", "expected"),
+    [
+        pytest.param(BISYNC, PATHS, False, False, PATHS, id="bisync-plain"),
+        pytest.param(
+            BISYNC,
+            PATHS,
+            True,
+            False,
+            # Released rclone (through v1.75.2) ignores _config's DryRun for
+            # bisync and runs it for real; only dryRun makes it a dry run.
+            {**PATHS, "dryRun": True, "_config": {"DryRun": True}},
+            id="bisync-dry-run",
+        ),
+        pytest.param(
+            BISYNC, PATHS, False, True, {**PATHS, "resync": True}, id="bisync-resync"
+        ),
+        pytest.param(
+            BISYNC,
+            PATHS,
+            True,
+            True,
+            {**PATHS, "dryRun": True, "_config": {"DryRun": True}, "resync": True},
+            id="bisync-resync-dry-run",
+        ),
+        pytest.param(
+            SYNC,
+            {"srcFs": "/a", "dstFs": "remote:b", "_config": {"Transfers": 8}},
+            True,
+            False,
+            {
+                "srcFs": "/a",
+                "dstFs": "remote:b",
+                "_config": {"Transfers": 8, "DryRun": True},
+            },
+            id="sync-dry-run-keeps-the-users-config",
+        ),
+        pytest.param(
+            COPY,
+            {"srcFs": "/a", "dstFs": "remote:b"},
+            True,
+            False,
+            {"srcFs": "/a", "dstFs": "remote:b", "_config": {"DryRun": True}},
+            id="copy-dry-run",
+        ),
+        pytest.param(
+            SYNC,
+            {"srcFs": "/a", "_config": '{"Transfers": 8}'},
+            True,
+            False,
+            {"srcFs": "/a", "_config": {"Transfers": 8, "DryRun": True}},
+            id="config-given-as-a-json-string",
+        ),
+        pytest.param(
+            SYNC,
+            {"srcFs": "/a", "_config": {"DryRun": True}},
+            False,
+            False,
+            {"srcFs": "/a", "_config": {"DryRun": True}},
+            id="plain-run-leaves-the-users-own-dry-run",
+        ),
+    ],
+)
+def test_build_job_payload(
+    method: str,
+    args: dict[str, Any],
+    dry_run: bool,
+    resync: bool,
+    expected: dict[str, Any],
+) -> None:
+    """A run asks rclone for exactly the dry run or resync it was given."""
+    assert build_job_payload(method, args, dry_run=dry_run, resync=resync) == expected
+
+
+@pytest.mark.parametrize("method", [BISYNC, SYNC])
+def test_a_plain_run_sends_no_false_flags(method: str) -> None:
+    """Nothing is sent as false: that could cancel a dry run set elsewhere.
+
+    The rcd may have been started with --dry-run, and HA cannot see that.
+    """
+    payload = build_job_payload(method, dict(PATHS))
+    assert payload == PATHS
+    assert not {"dryRun", "resync", "_config"} & payload.keys()
+
+
+def test_build_job_payload_leaves_the_args_alone() -> None:
+    """The parsed command_args are copied, never changed in place."""
+    args = {"srcFs": "/a", "_config": {"Transfers": 8}}
+    build_job_payload(SYNC, args, dry_run=True)
+    assert args == {"srcFs": "/a", "_config": {"Transfers": 8}}
+
+
+def test_resync_is_only_for_bisync() -> None:
+    """--resync means nothing to any other command, so it is refused."""
+    with pytest.raises(ValueError, match="resync"):
+        build_job_payload(SYNC, {}, resync=True)
+
+
+def start_requested(
+    devices: list[Device],
+    dry_run_requested: bool | None = None,
+    resync_requested: bool | None = None,
+) -> list[Device]:
+    """Start a run the way a button does: the flags go on the parent only."""
+    start(devices)
+    parent = make_api().get_parent(devices)
+    assert parent is not None
+    parent.dry_run_requested = dry_run_requested
+    parent.resync_requested = resync_requested
+    return devices
+
+
+def switch_of(devices: list[Device]) -> Device:
+    """Return the job switch."""
+    return next(d for d in devices if d.device_type == DeviceType.JOB_SWITCH)
+
+
+class TestRequestedRuns:
+    """A dry run or resync HA asked for is reported for what it was."""
+
+    def test_a_clean_dry_run_is_not_a_success(self) -> None:
+        """A dry run changed nothing, so it must not move Last Success Time.
+
+        Otherwise a job that only ever gets dry runs would look healthy to an
+        alert on Last Success Time.
+        """
+        devices = start_requested(make_api().get_devices(), dry_run_requested=True)
+        poll(make_api(), devices, status(), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) is None
+        # It is still a finished run, reported like any other.
+        assert switch_of(devices).state is False
+        assert state_of(devices, DeviceType.HEALTH_SENSOR) is False
+
+    def test_a_clean_resync_is_a_success(self) -> None:
+        """A resync really syncs, so it counts."""
+        devices = start_requested(make_api().get_devices(), resync_requested=True)
+        poll(make_api(), devices, status(), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) == CLEAN_END
+
+    def test_a_clean_resync_dry_run_is_not_a_success(self) -> None:
+        """The dry run is what matters, whatever else was asked for."""
+        devices = start_requested(
+            make_api().get_devices(), dry_run_requested=True, resync_requested=True
+        )
+        poll(make_api(), devices, status(), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) is None
+
+    def test_switch_shows_what_was_asked_for(self) -> None:
+        """The flags reach the switch, and stay there once the run ends."""
+        devices = start_requested(
+            make_api().get_devices(), dry_run_requested=True, resync_requested=True
+        )
+        poll(make_api(), devices, status(finished=False), stats())
+        assert switch_of(devices).atts is not None
+        assert switch_of(devices).atts["dry_run_requested"] is True
+        assert switch_of(devices).atts["resync_requested"] is True
+        poll(make_api(), devices, status(), stats())
+        assert switch_of(devices).atts["dry_run_requested"] is True
+
+    def test_a_plain_run_claims_neither(self) -> None:
+        """Not asking is not the same as knowing it was not a dry run."""
+        devices = start_requested(make_api().get_devices())
+        poll(make_api(), devices, status(), stats())
+        atts = switch_of(devices).atts
+        assert atts is not None
+        assert "dry_run_requested" not in atts
+        assert "resync_requested" not in atts
+
+    def test_finishing_resets_the_flags(self) -> None:
+        """The next run starts with nothing asked for."""
+        devices = start_requested(
+            make_api().get_devices(), dry_run_requested=True, resync_requested=True
+        )
+        poll(make_api(), devices, status(), stats())
+        assert all(d.dry_run_requested is None for d in devices)
+        assert all(d.resync_requested is None for d in devices)
+
+    def test_losing_the_job_resets_the_flags(self) -> None:
+        """A lost job ends the run, flags included."""
+        devices = start_requested(
+            make_api().get_devices(), dry_run_requested=True, resync_requested=True
+        )
+        poll(make_api(), devices, NOT_FOUND, stats())
+        assert all(d.dry_run_requested is None for d in devices)
+        assert all(d.resync_requested is None for d in devices)
+
+    def test_a_later_real_run_is_a_success_again(self) -> None:
+        """Only the dry run itself is skipped, not the runs after it."""
+        api = make_api()
+        devices = start_requested(api.get_devices(), dry_run_requested=True)
+        poll(api, devices, status(), stats())
+        start(devices)
+        poll(api, devices, status(end_time=LATER_END), stats())
+        assert state_of(devices, DeviceType.LAST_SUCCESS_SENSOR) == LATER_END

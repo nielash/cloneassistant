@@ -23,8 +23,14 @@ VERSION_INFO = {
 }
 
 
+@pytest.fixture(name="rclone_command")
+def rclone_command_fixture() -> str:
+    """Return the rc method the job runs; parametrize to choose another."""
+    return CHECK
+
+
 @pytest.fixture(name="config_entry")
-def config_entry_fixture(options: dict | None = None) -> MockConfigEntry:
+def config_entry_fixture(rclone_command: str) -> MockConfigEntry:
     """Return a config entry for a single rclone job."""
     return MockConfigEntry(
         domain=DOMAIN,
@@ -36,7 +42,7 @@ def config_entry_fixture(options: dict | None = None) -> MockConfigEntry:
             CONF_USERNAME: "test",
             CONF_PASSWORD: "1234",
             CONF_SCAN_INTERVAL: 60,
-            CONF_COMMAND: CHECK,
+            CONF_COMMAND: rclone_command,
             COMMAND_ARGS: "{}",
         },
     )

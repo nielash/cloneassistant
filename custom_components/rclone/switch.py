@@ -74,31 +74,7 @@ class RcloneJobSwitch(CoordinatorEntity[RcloneCoordinator], SwitchEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information."""
-        # Identifiers are what group entities into the same device.
-        title = ""
-        sw_version = "0"
-        hw_version = "0"
-        model_id = "0"
-        if self.coordinator.config_entry:
-            title = self.coordinator.config_entry.title
-        if self.coordinator.data.version_info["version"]:
-            sw_version = self.coordinator.data.version_info["version"]
-            hw_version = self.coordinator.data.version_info["osVersion"]
-            model_id = self.coordinator.data.version_info["goVersion"]
-        return DeviceInfo(
-            name=f"{title}",
-            manufacturer="Rclone",
-            model="rc",
-            sw_version=sw_version,
-            hw_version=hw_version,
-            model_id=model_id,
-            identifiers={
-                (
-                    DOMAIN,
-                    f"{self.coordinator.data.controller_name}-{self.device.device_id}",
-                )
-            },
-        )
+        return self.coordinator.job_device_info(self.device.device_id)
 
     @property
     def is_on(self) -> bool | None:
@@ -124,6 +100,10 @@ class RcloneJobSwitch(CoordinatorEntity[RcloneCoordinator], SwitchEntity):
         if self.device.atts is not None:
             attrs["jobid"] = self.device.atts["jobid"]
             attrs["output"] = self.device.atts["output"]
+            # Present only as true, when HA asked for a dry run or a resync.
+            for key in ("dry_run_requested", "resync_requested"):
+                if key in self.device.atts:
+                    attrs[key] = self.device.atts[key]
         return attrs
 
     # These methods allow HA to tell the actual device what to do.

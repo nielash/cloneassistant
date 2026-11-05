@@ -4,6 +4,7 @@ Eventually it should be hosted on PYPI.
 """
 
 import base64
+import copy
 from dataclasses import dataclass
 from enum import StrEnum
 import json
@@ -12,6 +13,8 @@ from typing import Any
 
 import aiohttp
 import requests
+
+from .const import BISYNC
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,6 +109,49 @@ class Device:
     # start again from 1 in the new process, so only (rclonejobid, execute_id)
     # identifies a job; a jobid alone can match some unrelated later job.
     execute_id: str | None = None
+    # Whether Home Assistant asked for this run to be a dry run or a resync:
+    # True if it did, None if it did not. Never False, because HA cannot
+    # rule either out -- the rcd may have been started with --dry-run, and
+    # the user's own command_args can ask for either. Set on the parent only,
+    # alongside rclonejobid, and reset with it.
+    dry_run_requested: bool | None = None
+    resync_requested: bool | None = None
+
+
+def build_job_payload(
+    method: str,
+    args: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    resync: bool = False,
+) -> dict[str, Any]:
+    """Return the rc payload for a run, as a dry run or a resync if asked.
+
+    A flag that is not asked for adds nothing: sending DryRun or dryRun as
+    false could cancel a dry run the rcd or the user's own args asked for.
+
+    A dry run goes in _config, which every rc call applies to itself. Bisync
+    also gets its own dryRun: every rclone release through v1.75.2 ignores
+    _config's DryRun for bisync and runs it for real (fixed on master by
+    914fa8793, not yet released as of 2026-11-05).
+    """
+    payload = copy.deepcopy(args)
+    if resync and method != BISYNC:
+        raise ValueError(f"resync applies only to {BISYNC}, not {method}")
+    if dry_run:
+        config = payload.get("_config", {})
+        if isinstance(config, str):
+            # rclone also takes _config as a JSON string.
+            config = json.loads(config)
+        if not isinstance(config, dict):
+            raise ValueError(f"_config must be an object, not {config!r}")
+        config["DryRun"] = True
+        payload["_config"] = config
+        if method == BISYNC:
+            payload["dryRun"] = True
+    if resync:
+        payload["resync"] = True
+    return payload
 
 
 class API:
@@ -237,6 +283,11 @@ class API:
                             -1000:
                         ],  # include only the last 10000 characters of output,
                     }
+                    # Only ever present as true; see Device.dry_run_requested.
+                    if parent.dry_run_requested:
+                        device.atts["dry_run_requested"] = True
+                    if parent.resync_requested:
+                        device.atts["resync_requested"] = True
                 case DeviceType.HEALTH_SENSOR:
                     device.state = resp["error"] != ""
                 case DeviceType.BYTES_SENSOR:
@@ -281,16 +332,26 @@ class API:
                 case DeviceType.LAST_SUCCESS_SENSOR:
                     # Deliberately left untouched while running and on failure,
                     # so the sensor keeps pointing at the last run that actually
-                    # worked rather than the last run that merely happened.
-                    if finished and not failed:
+                    # worked rather than the last run that merely happened. A
+                    # dry run HA asked for changed nothing, so it is not one.
+                    if finished and not failed and not parent.dry_run_requested:
                         device.state = resp["endTime"]
 
-            if resp["finished"]:
-                # clear jobid when job is finished
-                device.rclonejobid = 0
-                device.execute_id = None
+        if resp["finished"]:
+            # clear jobid when job is finished. After the loop, so that every
+            # device above still sees the parent's run flags.
+            for device in devices:
+                self.clear_job(device)
 
         return devices
+
+    @staticmethod
+    def clear_job(device: Device) -> None:
+        """Forget the run a device was waiting on."""
+        device.rclonejobid = 0
+        device.execute_id = None
+        device.dry_run_requested = None
+        device.resync_requested = None
 
     def handle_job_lost(self, devices: list[Device], reason: str) -> list[Device]:
         """End a run whose job we know about but rclone can no longer report on.
@@ -302,8 +363,7 @@ class API:
         Success Time is left alone.
         """
         for device in devices:
-            device.rclonejobid = 0
-            device.execute_id = None
+            self.clear_job(device)
             match device.device_type:
                 case DeviceType.JOB_SWITCH:
                     device.state = False

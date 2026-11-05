@@ -186,6 +186,31 @@ You can verify that your command is working by switching it "on" in the UI.
 > [!TIP]
 > The command's output (if any), can be viewed in the "Details" attributes of the "switch" entity. (Three-dots menu > "Details")
 
+#### Dry runs and resyncs
+
+You don't need to edit the job's JSON, or set up a second job, to try a command out first. Each job's device has buttons that run its command once:
+
+| Button             | Entity                                 | Runs the command with | Offered for                                                                                   |
+| ------------------ | -------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------- |
+| **Dry Run**        | `button.bisync_desktop_dry_run`        | `--dry-run`           | every command that changes files (not `check`, `fsinfo`, `hashsum`, `hashsumfile`, or `list`) |
+| **Resync**         | `button.bisync_desktop_resync`         | `--resync`            | `sync/bisync` only                                                                            |
+| **Resync Dry Run** | `button.bisync_desktop_resync_dry_run` | `--resync --dry-run`  | `sync/bisync` only                                                                            |
+
+A press starts one run, and the job's next run is a normal one again. A button won't start a run while the job is already running.
+
+A dry run is reported like any other run. The switch is on while it runs, and **Health**, **Last Error**, the start and end times, **Duration**, and the counters all describe it. **Transfers**, **Bytes**, and **Deletes** count what the run _would_ have done. **Last Success Time** is the exception: a dry run changes nothing, so it doesn't count as a success. A resync really syncs, so it does. Until the next run, the switch's attributes say what was asked for: `dry_run_requested: true`, `resync_requested: true`, or neither.
+
+To see _which_ files a dry run would change, look in rclone's own log (`--log-file`), at the lines that say "Skipped copy as --dry-run is set". The switch's `output` attribute is no substitute: it keeps only the last 1000 characters of the command's reply, and bisync's reply ends with its file paths, after the log.
+
+The buttons work in automations too:
+
+```yaml
+actions:
+  - action: button.press
+    target:
+      entity_id: button.bisync_desktop_dry_run
+```
+
 ### 4. (Optional) Schedule the command to run
 
 Home Assistant's powerful automation features make it easy to trigger your command based on schedules, events, the state of other entities, and many other things. Here's a simple example showing a command that runs every 10 minutes:
