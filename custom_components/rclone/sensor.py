@@ -608,6 +608,21 @@ class LastSuccessSensor(TimestampSensor, RestoreSensor):
         await super().async_added_to_hass()
         await self.async_restore_device_state()
 
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place entity_id renames (Home Assistant 2026.11+).
+
+        Because this class overrides async_added_to_hass, 2026.11 would
+        otherwise rename it the old way, by removing and re-adding it, until
+        that fallback goes away in 2027.11. Nothing here is keyed on
+        self.entity_id, so there is nothing to re-key. If a listener or signal
+        keyed on it is ever added, move it to the new id here.
+
+        Cores before 2026.11 never call this, so super() is only reached on a
+        core that defines the base method.
+        """
+        super().async_entity_id_changed(old_entity_id)  # type: ignore[misc]
+
     async def async_restore_device_state(self) -> None:
         """Seed the shared device object from the previously stored state."""
         # The coordinator rebuilds its devices from defaults on every startup,
