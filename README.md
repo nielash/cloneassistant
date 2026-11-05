@@ -40,7 +40,11 @@ The rclone jobs you monitor do not need to be running on the same machine as Hom
 
 2. Install [integration](https://github.com/nielash/cloneassistant):
 
-   Copy the `custom_components/rclone` directory into your Home Assistant `config/custom_components` directory, and restart Home Assistant.
+   On Home Assistant 2026.11 or later, open **Settings > Marketplace**, search for "Rclone", and install it:
+
+   [![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=nielash&repository=cloneassistant&category=integration)
+
+   On older versions, install it from [HACS](https://hacs.xyz/), or copy the `custom_components/rclone` directory into your Home Assistant `config/custom_components` directory and restart Home Assistant.
 
 3. Click "[Add Entry](http://homeassistant.local:8123/config/integrations/integration/rclone)" button and follow setup wizard
 
@@ -94,8 +98,21 @@ will attempt to run the [`rclone rcd`](https://rclone.org/commands/rclone_rcd/) 
 > [!NOTE]
 > For now, this is simply a ["custom integration"](https://developers.home-assistant.io/docs/creating_component_index) rather than an official published ["core" integration](https://www.home-assistant.io/integrations/?brands=featured). (I might consider submitting it at some point, if there's enough user interest.)
 
-> [!TIP]
-> If you have [HACS](https://hacs.xyz/) installed (optional), you can install this as a ["custom repository"](https://hacs.xyz/docs/faq/custom_repositories/).
+#### From the Marketplace (Home Assistant 2026.11 or later)
+
+1. Open **Settings > Marketplace**, search for "Rclone", and select it, or use this shortcut:
+
+   [![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=nielash&repository=cloneassistant&category=integration)
+
+2. Install it. Home Assistant takes you straight to the setup wizard, without a restart; continue with [Configure the Integration](#3-configure-the-integration).
+
+Updates appear under **Settings > Updates** and need a restart to take effect. Your files in `userfiles` are kept across updates.
+
+#### From HACS (before Home Assistant 2026.11)
+
+Search for "Rclone" in [HACS](https://hacs.xyz/), download it, and restart Home Assistant. Home Assistant 2026.11 moves HACS installs into the Marketplace automatically.
+
+#### Manually
 
 1. Locate your Home Assistant [`config/custom_components`](https://www.home-assistant.io/docs/configuration/#to-find-the-configuration-directory) directory. It may need to be created.
 
