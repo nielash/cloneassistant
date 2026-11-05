@@ -46,5 +46,23 @@
         "title": "Rclone Integration Options"
       }
     }
+  },
+  "entity": {
+    "button": {
+      "dry_run": {
+        "name": "Dry Run"
+      },
+      "resync": {
+        "name": "Resync"
+      },
+      "resync_dry_run": {
+        "name": "Resync Dry Run"
+      }
+    }
+  },
+  "exceptions": {
+    "job_running": {
+      "message": "A run of this job is already in progress. Wait for it to finish, or turn the job's switch off to stop it."
+    }
   }
 }

@@ -43,6 +43,8 @@ RCLONE_COMMANDS = {
     RMDIR: "operations/rmdir",
     RMDIRS: "operations/rmdirs",
 }
+# Commands that only read, so a dry run of them would do nothing different.
+READ_ONLY_COMMANDS = frozenset({CHECK, FSINFO, HASHSUM, HASHSUMFILE, LIST})
 COMMAND_ARGS = "command_args"
 COUNT_ERRORS_AS_FAILURE = "count_errors_as_failure"
 DEFAULT_COUNT_ERRORS_AS_FAILURE = False

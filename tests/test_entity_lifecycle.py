@@ -12,7 +12,7 @@ import inspect
 
 import pytest
 
-from custom_components.rclone import binary_sensor, sensor, switch
+from custom_components.rclone import binary_sensor, button, sensor, switch
 from homeassistant.helpers.entity import Entity
 
 try:
@@ -41,7 +41,7 @@ except ImportError:  # Home Assistant before 2026.11
 
 ENTITY_CLASSES = [
     cls
-    for module in (binary_sensor, sensor, switch)
+    for module in (binary_sensor, button, sensor, switch)
     for _, cls in inspect.getmembers(module, inspect.isclass)
     if issubclass(cls, Entity) and cls.__module__ == module.__name__
 ]

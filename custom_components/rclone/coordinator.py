@@ -17,10 +17,11 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.core import DOMAIN as HOMEASSISTANT_DOMAIN, HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import API, APIAuthError, Device, DeviceType
+from .api import API, APIAuthError, Device, DeviceType, build_job_payload
 from .const import (
     COMMAND_ARGS,
     COUNT_ERRORS_AS_FAILURE,
@@ -116,17 +117,23 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
             return
         parent.rclonejobid = int(job["jobid"])
         parent.execute_id = job.get("execute_id")
+        # Missing from jobs stored before these existed, which is None anyway.
+        parent.dry_run_requested = job.get("dry_run_requested")
+        parent.resync_requested = job.get("resync_requested")
         self._saved_job = job
         await self.async_refresh()
 
     async def _async_save_job(self, devices: list[Device]) -> None:
         """Keep the store in step with the job the parent device is waiting on."""
         parent = self.api.get_parent(devices)
-        job = (
-            {"jobid": parent.rclonejobid, "execute_id": parent.execute_id}
-            if parent and parent.rclonejobid
-            else None
-        )
+        job: dict[str, Any] | None = None
+        if parent and parent.rclonejobid:
+            job = {"jobid": parent.rclonejobid, "execute_id": parent.execute_id}
+            # Stored only when true, like the switch's attributes.
+            if parent.dry_run_requested:
+                job["dry_run_requested"] = True
+            if parent.resync_requested:
+                job["resync_requested"] = True
         if job == self._saved_job:
             return
         self._saved_job = job
@@ -160,6 +167,29 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
         # What is returned here is stored in self.data by the DataUpdateCoordinator
         return RcloneAPIData(self.api.controller_name, self.api.version_info, devices)
 
+    def job_device_info(self, device_id: int) -> DeviceInfo:
+        """Return the device the job's switch and buttons are grouped under."""
+        # Identifiers are what group entities into the same device.
+        title = ""
+        sw_version = "0"
+        hw_version = "0"
+        model_id = "0"
+        if self.config_entry:
+            title = self.config_entry.title
+        if self.data.version_info["version"]:
+            sw_version = self.data.version_info["version"]
+            hw_version = self.data.version_info["osVersion"]
+            model_id = self.data.version_info["goVersion"]
+        return DeviceInfo(
+            name=f"{title}",
+            manufacturer="Rclone",
+            model="rc",
+            sw_version=sw_version,
+            hw_version=hw_version,
+            model_id=model_id,
+            identifiers={(DOMAIN, f"{self.data.controller_name}-{device_id}")},
+        )
+
     def get_device_by_id(
         self, device_type: DeviceType, device_id: int
     ) -> Device | None:
@@ -174,11 +204,26 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
             None,
         )
 
-    async def start_job(self, device_type: DeviceType, device_id: int) -> None:
-        """Start the job."""
+    def job_running(self) -> bool:
+        """Return whether a run is being waited on."""
+        parent = self.api.get_parent(self.data.devices)
+        return bool(parent and parent.rclonejobid)
+
+    async def start_job(
+        self,
+        device_type: DeviceType,
+        device_id: int,
+        *,
+        dry_run: bool = False,
+        resync: bool = False,
+    ) -> None:
+        """Start the job, as a dry run or a resync if asked."""
         try:
-            payload = parse_json(self.command_args)
-            if payload is not None:
+            args = parse_json(self.command_args)
+            if args is not None:
+                payload = build_job_payload(
+                    self.rclone_command, args, dry_run=dry_run, resync=resync
+                )
                 job_id, execute_id = await self.api.async_job_call(
                     self.rclone_command,
                     payload,
@@ -187,6 +232,8 @@ class RcloneCoordinator(DataUpdateCoordinator[RcloneAPIData]):
                 if device and job_id > 0:
                     device.rclonejobid = job_id
                     device.execute_id = execute_id
+                    device.dry_run_requested = True if dry_run else None
+                    device.resync_requested = True if resync else None
                 await self.hass.async_add_executor_job(
                     partial(self.api.get_jobstatus, self.data.devices)
                 )
