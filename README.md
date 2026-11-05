@@ -348,6 +348,8 @@ Please feel free to use Github "Issues" to submit bug reports and feature reques
 
 Please also feel free to submit "Pull requests" (which are most welcome!)
 
+The tests run with `pip install -r requirements_test.txt` and then `pytest`. `tests/test_live_rcd.py` also presses the buttons against real rclone binaries, each on a throwaway `rcd`; it's skipped unless you name them, for example `RCLONE_LIVE_BINS=/path/to/rclone pytest tests/test_live_rcd.py` (separate several with `:`, or `;` on Windows).
+
 And if you build some cool custom dashboards/panels/cards/etc. and feel like sharing in "Discussions", I'd love to see them!
 
 ## Credits
