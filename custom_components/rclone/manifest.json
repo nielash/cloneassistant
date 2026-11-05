@@ -1,6 +1,7 @@
 {
   "domain": "rclone",
   "name": "Rclone",
+  "categories": ["computers_network.monitoring"],
   "codeowners": ["@nielash"],
   "config_flow": true,
   "documentation": "https://github.com/nielash/cloneassistant/blob/main/README.md",
