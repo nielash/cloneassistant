@@ -3,6 +3,7 @@
 Eventually it should be hosted on PYPI.
 """
 
+import base64
 from dataclasses import dataclass
 from enum import StrEnum
 import json
@@ -138,6 +139,21 @@ class API:
         """
         base = self.host if "://" in self.host else f"http://{self.host}"
         return f"{base.rstrip('/')}/{method}"
+
+    def _headers(self) -> dict[str, str]:
+        """Return the Authorization header for rcd.
+
+        Built here rather than with requests' auth= or aiohttp.BasicAuth. Both
+        of those encode the credentials as Latin-1, but rclone compares the
+        decoded bytes with --rc-user and --rc-pass as given, which are UTF-8.
+        So a non-ASCII password either did not match or raised
+        UnicodeEncodeError before anything was sent. aiohttp.BasicAuth is
+        also deprecated in the aiohttp 3.14 that Home Assistant 2026.10
+        ships, and its replacement, aiohttp.encode_basic_auth, does not exist
+        in the 3.13 that Home Assistant 2026.3 ships.
+        """
+        creds = f"{self.user}:{self.pwd}".encode()
+        return {"Authorization": "Basic " + base64.b64encode(creds).decode("ascii")}
 
     @property
     def controller_name(self) -> str:
@@ -456,9 +472,7 @@ class API:
                 aiohttp.ClientSession(
                     timeout=aiohttp.ClientTimeout(total=10), raise_for_status=True
                 ) as session,
-                session.post(
-                    url, json=payload, auth=aiohttp.BasicAuth(self.user, self.pwd)
-                ) as response,
+                session.post(url, json=payload, headers=self._headers()) as response,
             ):
                 _LOGGER.debug("Status: %s", response.status)
                 response_json = await response.json()
@@ -482,9 +496,7 @@ class API:
         url = self._url(method)
         async with (
             aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session,
-            session.post(
-                url, json=payload, auth=aiohttp.BasicAuth(self.user, self.pwd)
-            ) as response,
+            session.post(url, json=payload, headers=self._headers()) as response,
         ):
             _LOGGER.info("Status: %s", response.status)
             response_json = await response.json()
@@ -499,7 +511,7 @@ class API:
         }
         url = self._url(method)
 
-        resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
+        resp = requests.post(url, json=payload, headers=self._headers(), timeout=10)
         response_json = resp.json()
         _LOGGER.info(json.dumps(response_json, indent=4))
         return response_json
@@ -512,7 +524,7 @@ class API:
         }
         url = self._url(method)
 
-        resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
+        resp = requests.post(url, json=payload, headers=self._headers(), timeout=10)
         response_json = resp.json()
         _LOGGER.info(json.dumps(response_json, indent=4))
         return response_json
@@ -525,7 +537,7 @@ class API:
         }
         url = self._url(method)
 
-        resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
+        resp = requests.post(url, json=payload, headers=self._headers(), timeout=10)
         response_json = resp.json()
         _LOGGER.debug(json.dumps(response_json, indent=4))
         return response_json["hello"] == "world"
@@ -536,7 +548,7 @@ class API:
         payload: dict[str, str] = {}
         url = self._url(method)
 
-        resp = requests.post(url, json=payload, auth=(self.user, self.pwd), timeout=10)
+        resp = requests.post(url, json=payload, headers=self._headers(), timeout=10)
         response_json = resp.json()
         _LOGGER.debug(json.dumps(response_json, indent=4))
         return response_json

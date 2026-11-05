@@ -21,6 +21,11 @@ from custom_components.rclone.api import API
 # own example password ends in "#".
 AWKWARD_PASSWORD = "pa/ss?wo#rd@:"
 
+# rcd compares the decoded header bytes with --rc-pass, which is UTF-8. Latin-1,
+# what requests' auth= and aiohttp.BasicAuth use, sends different bytes for the
+# first and cannot encode the second at all.
+PASSWORDS = [AWKWARD_PASSWORD, "pässwörd", "密码🔑"]
+
 
 def make_api(host: str, pwd: str = "1234") -> API:
     """Build an API instance for a host."""
@@ -104,28 +109,33 @@ def rcd_fixture(socket_enabled: None) -> Iterator[tuple[str, list[dict[str, Any]
 
 
 def expected_auth(pwd: str) -> str:
-    """Return the Basic auth header rcd should receive."""
+    """Return the Basic auth header rcd should receive: UTF-8, as rcd decodes it."""
     return "Basic " + base64.b64encode(f"test:{pwd}".encode()).decode()
 
 
+@pytest.mark.parametrize("pwd", PASSWORDS)
 @pytest.mark.parametrize("with_scheme", [False, True])
-def test_requests_calls_authenticate(rcd, with_scheme: bool) -> None:
+def test_requests_calls_authenticate(rcd, with_scheme: bool, pwd: str) -> None:
     """The synchronous calls (requests) reach rcd with the password intact."""
     host, recorded = rcd
-    api = make_api(f"http://{host}" if with_scheme else host, pwd=AWKWARD_PASSWORD)
+    api = make_api(f"http://{host}" if with_scheme else host, pwd=pwd)
 
     assert api.noopauth_call()
     api.jobstatus_call(7)
 
     assert [r["path"] for r in recorded] == ["/rc/noopauth", "/job/status"]
     for request in recorded:
-        assert request["authorization"] == expected_auth(AWKWARD_PASSWORD)
+        assert request["authorization"] == expected_auth(pwd)
 
 
-def test_aiohttp_calls_authenticate(rcd) -> None:
+# aiohttp.BasicAuth and session.post(auth=...) warn from aiohttp 3.14 on, and
+# go away in aiohttp 4.
+@pytest.mark.filterwarnings("error::DeprecationWarning")
+@pytest.mark.parametrize("pwd", PASSWORDS)
+def test_aiohttp_calls_authenticate(rcd, pwd: str) -> None:
     """The asynchronous calls (aiohttp) reach rcd with the password intact."""
     host, recorded = rcd
-    api = make_api(host, pwd=AWKWARD_PASSWORD)
+    api = make_api(host, pwd=pwd)
 
     # Not asyncio.run(): it unsets the current event loop when it finishes, and
     # the Home Assistant fixtures in later test files fail without one.
@@ -141,4 +151,4 @@ def test_aiohttp_calls_authenticate(rcd) -> None:
 
     assert [r["path"] for r in recorded] == ["/sync/sync", "/job/stop"]
     for request in recorded:
-        assert request["authorization"] == expected_auth(AWKWARD_PASSWORD)
+        assert request["authorization"] == expected_auth(pwd)
