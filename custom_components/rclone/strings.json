@@ -30,8 +30,7 @@
           "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
         }
       }
-    },
-    "title": "Rclone Integration"
+    }
   },
   "options": {
     "step": {
