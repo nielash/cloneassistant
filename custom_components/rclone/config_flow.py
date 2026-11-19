@@ -45,6 +45,12 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Linked from the command_args description. hassfest rejects URLs in the
+# strings themselves, so the forms that show the field pass it in.
+DESCRIPTION_PLACEHOLDERS = {
+    "rc_docs_url": "https://rclone.org/rc/#specifying-remotes-to-work-on"
+}
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(
@@ -69,15 +75,25 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 mode=SelectSelectorMode.DROPDOWN,
             )
         ),
-        vol.Required(
-            COMMAND_ARGS,
-            default="",
-            description={
-                "json blob - see https://rclone.org/rc/#specifying-remotes-to-work-on"
-            },
-        ): str,
+        vol.Required(COMMAND_ARGS, default="{}"): str,
     }
 )
+
+
+def command_args_errors(data: dict[str, Any]) -> dict[str, str]:
+    """Return the form errors for command_args, keyed by field.
+
+    rc takes its parameters as a JSON object, so anything else -- a parse
+    error, or valid JSON that is a list, a string, or null -- is rejected
+    here rather than when the job is first started.
+    """
+    try:
+        args = json.loads(data[COMMAND_ARGS])
+    except ValueError:
+        return {COMMAND_ARGS: "invalid_json"}
+    if not isinstance(args, dict):
+        return {COMMAND_ARGS: "invalid_json"}
+    return {}
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -85,13 +101,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-
-    # If the PyPI package is not built with async, pass the methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     the_validate_func, data[CONF_USERNAME], data[CONF_PASSWORD]
-    # )
-
     api = API(
         data[CONF_HOST],
         data[CONF_USERNAME],
@@ -105,8 +114,6 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     except APIConnectionError as err:
         raise CannotConnect from err
 
-    if parse_json(data[COMMAND_ARGS]) is None:
-        raise InvalidAuth("Invalid JSON for command args")
     return {"title": f"{data[CONF_FRIENDLY_NAME]}"}
 
 
@@ -130,29 +137,34 @@ class RcloneConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            # The form has been filled in and submitted, so process the data provided.
-            try:
-                # Validate that the setup data is valid and if not handle errors.
-                # The errors["base"] values match the values in the strings.json and translation files.
-                info = await validate_input(self.hass, user_input)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
+            # Check the JSON first: it needs no network, and a connection
+            # error would otherwise hide it.
+            errors = command_args_errors(user_input)
+            if not errors:
+                try:
+                    info = await validate_input(self.hass, user_input)
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                except InvalidAuth:
+                    errors["base"] = "invalid_auth"
+                except Exception:  # pylint: disable=broad-except
+                    _LOGGER.exception("Unexpected exception")
+                    errors["base"] = "unknown"
 
-            if "base" not in errors:
-                # Validation was successful, so create a unique id for this instance of the integration
-                # and create the config entry.
+            if not errors:
                 await self.async_set_unique_id(info.get("title"))
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(title=info["title"], data=user_input)
 
-        # Show initial form.
+        # Show the form: empty the first time, and after an error with what
+        # the user entered, so they only have to correct the field that failed.
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, user_input
+            ),
+            errors=errors,
+            description_placeholders=DESCRIPTION_PLACEHOLDERS,
         )
 
     async def async_step_reconfigure(
@@ -191,22 +203,29 @@ class RcloneConfigFlow(ConfigFlow, domain=DOMAIN):
                     reason="reconfigure_successful",
                 )
         if config_entry is not None:
+            # After an error, show what the user entered rather than the
+            # saved values. command_args is not on this form and is not
+            # checked here: the options flow is where it is edited, and a
+            # stored value this form cannot change must not block it.
             return self.async_show_form(
                 step_id="reconfigure",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            CONF_FRIENDLY_NAME,
-                            default=config_entry.data[CONF_FRIENDLY_NAME],
-                        ): str,
-                        vol.Required(
-                            CONF_HOST, default=config_entry.data[CONF_HOST]
-                        ): str,
-                        vol.Required(
-                            CONF_USERNAME, default=config_entry.data[CONF_USERNAME]
-                        ): str,
-                        vol.Required(CONF_PASSWORD): str,
-                    }
+                data_schema=self.add_suggested_values_to_schema(
+                    vol.Schema(
+                        {
+                            vol.Required(
+                                CONF_FRIENDLY_NAME,
+                                default=config_entry.data[CONF_FRIENDLY_NAME],
+                            ): str,
+                            vol.Required(
+                                CONF_HOST, default=config_entry.data[CONF_HOST]
+                            ): str,
+                            vol.Required(
+                                CONF_USERNAME, default=config_entry.data[CONF_USERNAME]
+                            ): str,
+                            vol.Required(CONF_PASSWORD): str,
+                        }
+                    ),
+                    user_input,
                 ),
                 errors=errors,
             )
@@ -224,7 +243,10 @@ class RcloneOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle options flow."""
+        errors: dict[str, str] = {}
         if user_input is not None:
+            errors = command_args_errors(user_input)
+        if user_input is not None and not errors:
             options = self.config_entry.options | user_input
             # fill options not exposed in UI
             user_input[CONF_HOST] = self.config_entry.data[CONF_HOST]
@@ -255,11 +277,7 @@ class RcloneOptionsFlowHandler(OptionsFlow):
                     )
                 ),
                 vol.Required(
-                    COMMAND_ARGS,
-                    default=self.config_entry.data[COMMAND_ARGS],
-                    description={
-                        "json blob - see https://rclone.org/rc/#specifying-remotes-to-work-on"
-                    },
+                    COMMAND_ARGS, default=self.config_entry.data[COMMAND_ARGS]
                 ): str,
                 vol.Required(
                     COUNT_ERRORS_AS_FAILURE,
@@ -270,7 +288,12 @@ class RcloneOptionsFlowHandler(OptionsFlow):
             }
         )
 
-        return self.async_show_form(step_id="init", data_schema=data_schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(data_schema, user_input),
+            errors=errors,
+            description_placeholders=DESCRIPTION_PLACEHOLDERS,
+        )
 
 
 class CannotConnect(HomeAssistantError):
@@ -279,13 +302,3 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
-
-
-# Safe JSON parsing with error handling
-def parse_json(json_string: str) -> dict[str, Any] | None:
-    """Parse JSON string safely."""
-    try:
-        return json.loads(json_string)
-    except json.JSONDecodeError as err:
-        _LOGGER.error("Invalid JSON: %s", err)
-        return None

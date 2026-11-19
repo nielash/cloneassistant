@@ -7,6 +7,7 @@
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
+      "invalid_json": "Not a JSON object. The parameters go inside curly braces, with keys and text values in double quotes. A command that needs no parameters takes an empty pair of braces.",
       "unknown": "Unexpected error"
     },
     "step": {
@@ -22,24 +23,31 @@
       },
       "user": {
         "data": {
+          "command_args": "Command Args",
           "host": "Host",
           "password": "Password",
           "username": "Username"
         },
         "data_description": {
+          "command_args": "The command's parameters, as a JSON object in the form rclone's rc expects: see [Specifying remotes to work on]({rc_docs_url}). The README has an example for each command.",
           "host": "The --rc-addr rclone is serving on, as host:port. Start it with https:// if rcd serves TLS (--rc-cert) or sits behind an HTTPS reverse proxy; the certificate must be one Home Assistant trusts, such as Let's Encrypt, so self-signed certificates are not supported. Anything after the port is used as the base URL (--rc-baseurl)."
         }
       }
     }
   },
   "options": {
+    "error": {
+      "invalid_json": "Not a JSON object. The parameters go inside curly braces, with keys and text values in double quotes. A command that needs no parameters takes an empty pair of braces."
+    },
     "step": {
       "init": {
         "data": {
+          "command_args": "Command Args",
           "count_errors_as_failure": "Count runs with errors as failed",
           "scan_interval": "Scan Interval (seconds)"
         },
         "data_description": {
+          "command_args": "The command's parameters, as a JSON object in the form rclone's rc expects: see [Specifying remotes to work on]({rc_docs_url}). The README has an example for each command.",
           "count_errors_as_failure": "A run can report no error while still leaving errors in its stats. A check that could not list a subdirectory is the usual case: everything it compared matched, but it did not get to see everything. Turn this on to treat those runs as failures for Last Success Time."
         },
         "description": "Edit the options.",
